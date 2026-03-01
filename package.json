@@ -7,21 +7,30 @@
     "build": "next build",
     "start": "next start -p 3120",
     "lint": "eslint .",
-    "clean": "next clean"
+    "clean": "next clean",
+    "phase3:status": "node scripts/phase3-status.mjs"
   },
   "dependencies": {
+    "@deck.gl/aggregation-layers": "^9.2.10",
+    "@deck.gl/core": "^9.2.10",
+    "@deck.gl/layers": "^9.2.10",
+    "@deck.gl/mapbox": "^9.2.10",
     "@google/genai": "^1.17.0",
     "@hookform/resolvers": "^5.2.1",
+    "@tanstack/react-query": "^5.90.21",
+    "@types/mapbox-gl": "^3.4.1",
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.553.0",
+    "mapbox-gl": "^3.19.0",
     "motion": "^12.23.24",
     "next": "^15.4.9",
     "postcss": "^8.5.6",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.11",
