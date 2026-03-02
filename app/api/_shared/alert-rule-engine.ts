@@ -86,6 +86,7 @@ function runTrafficRules(
           : 'warning';
       const title = typeof properties.title === 'string' ? properties.title : '도로 돌발 상황';
       const speedKph = toNumber(properties.speedKph);
+      const accInfo = typeof properties.accInfo === 'string' ? properties.accInfo : null;
 
       addAlert(
         alerts,
@@ -97,7 +98,7 @@ function runTrafficRules(
           message:
             speedKph !== null
               ? `평균 속도 ${speedKph}km/h. 우회 경로 검토 필요.`
-              : '돌발 상황이 감지되었습니다. 우회 경로를 검토하세요.',
+              : accInfo ?? '돌발 상황이 감지되었습니다. 우회 경로를 검토하세요.',
           coordinates: getPointCoordinates(feature),
         }),
         seen,

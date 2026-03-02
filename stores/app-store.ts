@@ -19,6 +19,8 @@ interface AppStore {
   toastAlertIds: string[];
   alertPreferences: AlertPreferences;
   rightPanelOpen: boolean;
+  domainDataSource: Partial<Record<DomainType, 'mock' | 'upstream'>>;
+  layerDataSource: Record<string, 'mock' | 'upstream'>;
 
   // === 1팀 액션 ===
   addLayer: (layer: LayerConfig) => void;
@@ -41,6 +43,8 @@ interface AppStore {
   setAlertSeverityEnabled: (severity: AlertSeverity, enabled: boolean) => void;
   setAlertDomainEnabled: (domain: DomainType, enabled: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
+  setDomainDataSource: (domain: DomainType, source: 'mock' | 'upstream') => void;
+  setLayerDataSource: (layerId: string, source: 'mock' | 'upstream') => void;
 
   // === 공유 액션 ===
   resetCamera: () => void;
@@ -69,6 +73,8 @@ export const useAppStore = create<AppStore>((set) => ({
     domains: { ...DEFAULT_ALERT_DOMAINS },
   },
   rightPanelOpen: true,
+  domainDataSource: {},
+  layerDataSource: {},
 
   // --- 1팀 액션 ---
   addLayer: (layer) =>
@@ -217,6 +223,28 @@ export const useAppStore = create<AppStore>((set) => ({
     })),
 
   setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
+
+  setDomainDataSource: (domain, source) =>
+    set((s) => {
+      if (s.domainDataSource[domain] === source) return s;
+      return {
+        domainDataSource: {
+          ...s.domainDataSource,
+          [domain]: source,
+        },
+      };
+    }),
+
+  setLayerDataSource: (layerId, source) =>
+    set((s) => {
+      if (s.layerDataSource[layerId] === source) return s;
+      return {
+        layerDataSource: {
+          ...s.layerDataSource,
+          [layerId]: source,
+        },
+      };
+    }),
 
   // --- 공유 ---
   resetCamera: () => set({ camera: { ...KOREA_CENTER } }),

@@ -17,8 +17,11 @@ import { toSelectedObjectFromFeature } from '@/lib/selected-object';
 
 export default function Team2LayerBootstrap() {
   const addLayer = useAppStore((s) => s.addLayer);
+  const removeLayer = useAppStore((s) => s.removeLayer);
   const selectObject = useAppStore((s) => s.selectObject);
   const triggerAlert = useAppStore((s) => s.triggerAlert);
+  const setDomainDataSource = useAppStore((s) => s.setDomainDataSource);
+  const setLayerDataSource = useAppStore((s) => s.setLayerDataSource);
 
   const seenAlertIds = useRef<Set<string>>(new Set());
   const seenWarnings = useRef<Set<string>>(new Set());
@@ -43,6 +46,22 @@ export default function Team2LayerBootstrap() {
     (payload?: PublicAPIResponse) => {
       if (!payload) return;
 
+      const source = payload.source ?? 'mock';
+      const affectedDomains = new Set(payload.layers.map((layer) => layer.domain));
+      for (const domain of affectedDomains) {
+        setDomainDataSource(domain, source);
+      }
+
+      const incomingLayerIds = new Set(payload.layers.map((layer) => layer.id));
+      const state = useAppStore.getState();
+      for (const [layerId, layer] of Object.entries(state.layers)) {
+        const isManagedLayer = Boolean(state.layerDataSource[layerId]);
+        if (!isManagedLayer) continue;
+        if (!affectedDomains.has(layer.domain)) continue;
+        if (incomingLayerIds.has(layerId)) continue;
+        removeLayer(layerId);
+      }
+
       if (payload.warnings?.length) {
         for (const warning of payload.warnings) {
           const warningKey = `${payload.domain}:${warning}`;
@@ -66,6 +85,7 @@ export default function Team2LayerBootstrap() {
 
       for (const layer of payload.layers) {
         const prevLayer = useAppStore.getState().layers[layer.id];
+        setLayerDataSource(layer.id, source);
 
         addLayer({
           ...layer,
@@ -97,7 +117,7 @@ export default function Team2LayerBootstrap() {
         }
       }
     },
-    [addLayer, selectObject, triggerAlert]
+    [addLayer, removeLayer, selectObject, setDomainDataSource, setLayerDataSource, triggerAlert]
   );
 
   useEffect(() => {

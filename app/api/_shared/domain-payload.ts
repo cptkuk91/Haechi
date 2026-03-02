@@ -1,6 +1,10 @@
 import type { AlertSeverity, DomainType, LayerType } from '@/types/domain';
 import { fetchDomainUpstream } from '@/app/api/_shared/upstream-source';
-import { normalizeUpstreamPayload } from '@/app/api/_shared/upstream-normalizer';
+import {
+  formatTrafficResultWarning,
+  getTrafficResultStatus,
+  normalizeUpstreamPayload,
+} from '@/app/api/_shared/upstream-normalizer';
 import { applyAlertRules, type AlertRuleDiagnostics } from '@/app/api/_shared/alert-rule-engine';
 
 export type Team2DomainRoute =
@@ -690,11 +694,18 @@ export async function resolveDomainPayload(
 
   const normalized = normalizeUpstreamPayload(domain, upstream.raw);
   if (!normalized) {
+    const trafficStatus = domain === 'traffic' ? getTrafficResultStatus(upstream.raw) : null;
+    const trafficWarning = trafficStatus ? formatTrafficResultWarning(trafficStatus) : null;
+
+    const warnings = [...upstream.warnings];
+    if (trafficWarning) warnings.push(trafficWarning);
+    if (!trafficWarning) warnings.push(`Invalid upstream payload shape for ${domain}`);
+
     const ruled = applyAlertRules(fallback);
     return {
       payload: ruled.payload,
       source: 'mock',
-      warnings: [...upstream.warnings, `Invalid upstream payload shape for ${domain}`],
+      warnings,
       ruleDiagnostics: ruled.diagnostics,
     };
   }

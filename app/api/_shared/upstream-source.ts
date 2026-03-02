@@ -15,6 +15,44 @@ const DOMAIN_UPSTREAM_ENV: Record<Team2DomainRoute, string> = {
   vulnerable: 'TEAM2_VULNERABLE_UPSTREAM_URL',
 };
 
+const DOMAIN_KEY_OVERRIDE_ENV: Partial<Record<Team2DomainRoute, string>> = {
+  traffic: 'TEAM2_TRAFFIC_SEOUL_INCIDENT_API_KEY',
+};
+
+function interpolateUpstreamTemplate(
+  rawUrl: string,
+  domain: Team2DomainRoute,
+  key: string | undefined
+): { url: string; usesTemplate: boolean; warning?: string } {
+  const usesTemplate = /\{KEY\}|\{TYPE\}|\{SERVICE\}|\{START_INDEX\}|\{END_INDEX\}/i.test(rawUrl);
+  if (!usesTemplate) return { url: rawUrl, usesTemplate: false };
+
+  if (!key || !key.trim()) {
+    return {
+      url: rawUrl,
+      usesTemplate: true,
+      warning: 'Missing API key for upstream URL template token {KEY}',
+    };
+  }
+
+  const domainUpper = domain.toUpperCase();
+  const serviceFallback = domain === 'traffic' ? 'AccInfo' : domain;
+  const templateValues: Record<string, string> = {
+    KEY: key,
+    TYPE: process.env[`TEAM2_${domainUpper}_UPSTREAM_TYPE`] ?? 'xml',
+    SERVICE: process.env[`TEAM2_${domainUpper}_UPSTREAM_SERVICE`] ?? serviceFallback,
+    START_INDEX: process.env[`TEAM2_${domainUpper}_UPSTREAM_START_INDEX`] ?? '1',
+    END_INDEX: process.env[`TEAM2_${domainUpper}_UPSTREAM_END_INDEX`] ?? '1000',
+  };
+
+  let interpolated = rawUrl;
+  for (const [token, value] of Object.entries(templateValues)) {
+    interpolated = interpolated.replace(new RegExp(`\\{${token}\\}`, 'gi'), encodeURIComponent(value));
+  }
+
+  return { url: interpolated, usesTemplate: true };
+}
+
 function buildUpstreamURL(domain: Team2DomainRoute): { url: string | null; warning?: string } {
   const envName = DOMAIN_UPSTREAM_ENV[domain];
   const base = process.env[envName];
@@ -23,12 +61,19 @@ function buildUpstreamURL(domain: Team2DomainRoute): { url: string | null; warni
     return { url: null, warning: `Missing upstream URL env: ${envName}` };
   }
 
-  const key = process.env[`TEAM2_${domain.toUpperCase()}_API_KEY`] ?? process.env.TEAM2_PUBLIC_API_KEY;
+  const overrideKeyEnv = DOMAIN_KEY_OVERRIDE_ENV[domain];
+  const overrideKey = overrideKeyEnv ? process.env[overrideKeyEnv] : undefined;
+  const domainKey = process.env[`TEAM2_${domain.toUpperCase()}_API_KEY`];
+  const key = overrideKey ?? domainKey ?? process.env.TEAM2_PUBLIC_API_KEY;
   const keyParam = process.env.TEAM2_PUBLIC_API_KEY_PARAM ?? 'serviceKey';
+  const templated = interpolateUpstreamTemplate(base, domain, key);
+  if (templated.warning) {
+    return { url: null, warning: templated.warning };
+  }
 
   try {
-    const url = new URL(base);
-    if (key && keyParam && !url.searchParams.has(keyParam)) {
+    const url = new URL(templated.url);
+    if (!templated.usesTemplate && key && keyParam && !url.searchParams.has(keyParam)) {
       url.searchParams.set(keyParam, key);
     }
     return { url: url.toString() };
@@ -74,8 +119,12 @@ export async function fetchDomainUpstream(domain: Team2DomainRoute): Promise<Ups
     try {
       return { raw: JSON.parse(text), warnings };
     } catch {
-      warnings.push(`Upstream response is not JSON for ${domain}`);
-      return { raw: null, warnings };
+      // XML/CSV 등 비JSON 응답도 downstream normalizer에서 처리할 수 있도록 raw를 전달한다.
+      if (!text.trim()) {
+        warnings.push(`Upstream response is empty for ${domain}`);
+        return { raw: null, warnings };
+      }
+      return { raw: text, warnings };
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown upstream error';

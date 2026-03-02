@@ -18,29 +18,41 @@
 
 ## 3. 환경변수 및 API 키
 
-### 필수 키
-| 변수 | 설명 | 상태 |
-|------|------|------|
-| `NEXT_PUBLIC_MAPBOX_TOKEN` | Mapbox GL JS 지도 렌더링 토큰 | **설정 완료** |
-| `GEMINI_API_KEY` | Gemini AI API (미사용) | 미설정 |
-| `APP_URL` | 앱 호스팅 URL | 미설정 |
+### 3-1. 필수 키 (실제값 필요)
+| 변수 | 어디서 가져오나 | 메모 |
+|------|------------------|------|
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | [Mapbox 계정 > Access tokens](https://account.mapbox.com/access-tokens/) | `pk.`로 시작하는 Public token 발급 후 `.env.local`에 설정 |
+| `APP_URL` | 로컬: `http://localhost:3000`, 배포: Vercel/Cloud Run 배포 URL | OAuth callback, self-call 스크립트에서 사용 |
+| `GEMINI_API_KEY` | [Google AI Studio API Keys](https://aistudio.google.com/app/apikey) | 현재 앱 로직에서는 직접 사용되지 않지만 런타임/확장 대비용 |
 
-### Team2 BFF 업스트림 설정 (선택)
-모든 도메인은 업스트림 URL 미설정 시 자동으로 mock 데이터를 사용합니다.
+### 3-2. Team2 BFF 업스트림 키/URL (실제 연동 시)
+업스트림 URL이 비어 있으면 `mock` 데이터가 자동 사용됩니다.
 
-| 변수 | 설명 |
-|------|------|
-| `TEAM2_PUBLIC_API_KEY` | 공통 공공데이터 API 키 |
-| `TEAM2_PUBLIC_API_KEY_PARAM` | API 키 쿼리 파라미터명 (기본: serviceKey) |
-| `TEAM2_UPSTREAM_TIMEOUT_MS` | 업스트림 요청 타임아웃 (기본: 8000ms) |
-| `TEAM2_TRAFFIC_UPSTREAM_URL` | 교통 도메인 업스트림 URL |
-| `TEAM2_WEATHER_UPSTREAM_URL` | 기상 도메인 업스트림 URL |
-| `TEAM2_DISASTER_UPSTREAM_URL` | 재난 도메인 업스트림 URL |
-| `TEAM2_INFRA_UPSTREAM_URL` | 인프라 도메인 업스트림 URL |
-| `TEAM2_CRIME_UPSTREAM_URL` | 치안 도메인 업스트림 URL |
-| `TEAM2_HEALTH_UPSTREAM_URL` | 보건 도메인 업스트림 URL |
-| `TEAM2_VULNERABLE_UPSTREAM_URL` | 사회적 약자 도메인 업스트림 URL |
-| `TEAM2_[DOMAIN]_API_KEY` | 도메인별 개별 API 키 (공통 키보다 우선) |
+| 변수 | 실제값 가져오는 위치 | 메모 |
+|------|------------------------|------|
+| `TEAM2_PUBLIC_API_KEY` | [공공데이터포털(data.go.kr)](https://www.data.go.kr/)에서 OpenAPI 활용신청 후 발급받은 일반 인증키(서비스키) | 공통 키(도메인별 키 미설정 시 fallback) |
+| `TEAM2_PUBLIC_API_KEY_PARAM` | 사용하려는 API 문서의 인증 파라미터명 확인 | 기본값 `serviceKey` |
+| `TEAM2_UPSTREAM_TIMEOUT_MS` | 내부 운영 정책 값 | 기본 `8000` |
+| `TEAM2_[DOMAIN]_UPSTREAM_URL` | 각 도메인에서 선택한 실제 OpenAPI endpoint | 예: `TEAM2_WEATHER_UPSTREAM_URL` |
+| `TEAM2_[DOMAIN]_API_KEY` | 도메인별 API 제공기관 포털 (필요한 경우) | 설정 시 공통 키보다 우선 |
+
+### 3-3. 도메인별 권장 키 발급처
+| 도메인 | 권장 발급처 | 비고 |
+|--------|-------------|------|
+| `traffic` | 공공데이터포털(data.go.kr) - 국토교통/도로교통 계열 API | 교통량, 돌발상황, 소통정보 |
+| `weather` | 공공데이터포털(data.go.kr) - 기상청 API | 단기예보/초단기실황 등 |
+| `disaster` | 공공데이터포털(data.go.kr) - 행안부/산림청/재난 관련 API | 재난문자, 산불 등 |
+| `infra` | 공공데이터포털(data.go.kr) - 전력/댐/상하수도 관련 기관 API | 인프라 부하/상태 데이터 |
+| `crime` | 공공데이터포털(data.go.kr) - 경찰/치안 관련 API | 사건/위험지수 지표 |
+| `health` | 공공데이터포털(data.go.kr) - 보건복지부/질병청/응급의료 API | 병상/응급의료/감염병 |
+| `vulnerable` | 공공데이터포털(data.go.kr) - 복지/취약계층 관련 API | 복지시설/취약계층 지원 지표 |
+
+### 3-4. 실제 키 세팅 순서
+1. data.go.kr에서 도메인별 OpenAPI 활용신청 후 서비스키 발급
+2. 각 API 문서에서 endpoint URL + 키 파라미터명(`serviceKey` 등) 확인
+3. `.env.local`에 `TEAM2_[DOMAIN]_UPSTREAM_URL` / `TEAM2_[DOMAIN]_API_KEY` 또는 `TEAM2_PUBLIC_API_KEY` 입력
+4. `/api/[domain]` 응답에서 `source: "upstream"`으로 전환되는지 확인
+5. 실패 시 `DataPipelineStatus`와 서버 로그의 warning(`Missing upstream URL env`, `Upstream responded ...`) 확인
 
 ## 4. 프로젝트 파일 구조
 
@@ -70,7 +82,7 @@ tenmo/
 │   ├── panels/
 │   │   ├── LayerPanel.tsx      # 좌측 레이어 토글 패널
 │   │   ├── StatusPanel.tsx     # 우측 상태/상세정보 패널
-│   │   └── AlertDashboard.tsx  # 경보 대시보드 (Active/History/Stats)
+│   │   └── AlertDashboard.tsx  # 경보 대시보드 (History/Stats)
 │   ├── alert/
 │   │   ├── AlertEngine.tsx     # 토스트 경보 배너 엔진
 │   │   ├── WarningOverlay.tsx  # Critical 경보 전체화면 오버레이
@@ -164,74 +176,7 @@ interface LayerConfig {
 - **PIP 패널**: CCTV 스트리밍 등 상세 정보 오버레이
 - **CRT 스캔라인 + 비네트**: 관제 분위기 효과
 
-## 7. 작업 완료 내역
-
-### Phase 1: 기본 환경 및 관제 UI 인프라 구축 — ✅ 완료
-
-#### 1팀
-- ✅ **3D 지도 엔진**: Mapbox GL JS + Deck.gl 통합, 다크 스타일, 한국 중심 초기 뷰 (36.5, 127.5, zoom 7, pitch 45)
-- ✅ **카메라 시스템**: flyTo 애니메이션, resetCamera, 줌 레벨별 LOD 분기
-- ✅ **레이어 매니저**: addLayer/removeLayer/updateLayerData/toggleLayer API
-- ✅ **좌측 레이어 패널**: 13개 도메인 아코디언, 토글 스위치, 활성 카운트 배지
-- ✅ **홀로그램 툴팁**: deck.gl pickingInfo 기반 hover 감지, 형광 보더 스타일
-- ✅ **PIP 패널**: 우측 하단 플로팅 윈도우
-
-#### 2팀
-- ✅ **Next.js 앱 인프라**: App Router, layout.tsx, providers.tsx (React Query)
-- ✅ **대시보드 레이아웃**: 풀스크린 구조, HUD 상단 바, 우측 상태 패널
-- ✅ **경보 시스템 코어**: AlertEngine (토스트 배너), WarningOverlay (critical 오버레이)
-- ✅ **공통 UI 컴포넌트**: GlassCard, StatusBadge, DataFeed, MiniChart
-- ✅ **Zustand 스토어**: layers, camera, selectedObject, alerts, 공유 액션
-
-### Phase 2: 정적 데이터(POI) 시각화 — ✅ 완료
-
-#### 1팀
-- ✅ **CCTV 마커**: 전국 CCTV 위치 마커 + 상태별 색상
-- ✅ **비행금지구역/MDL**: PolygonLayer 3D 폴리곤 (P-73, R-75 등), MDL/KADIZ 경계선
-- ✅ **해양 인프라**: 항만 터미널, VTS 관제구역, 정박지 마커
-- ✅ **대중교통 노선**: 철도 노선 3D 라인 + 역사 마커
-
-#### 2팀
-- ✅ **BFF API 구축**: /api/[domain] 엔드포인트 (7개 도메인 공통 라우트)
-- ✅ **Mock 데이터**: domain-payload.ts (710줄, 13개 도메인 GeoJSON)
-- ✅ **React Query 훅**: useTrafficData, useWeatherData 등 7개 편의 훅
-- ✅ **Team2LayerBootstrap**: API 데이터 → Deck.gl 레이어 자동 등록
-- ✅ **업스트림 소스**: upstream-source.ts + upstream-normalizer.ts
-
-### Phase 3: 동적 데이터 연동 및 애니메이션 — ✅ 완료
-
-#### 1팀
-- ✅ **항공기 트래킹**: SimpleMeshLayer 기반 위치 보간 이동, 고도별 크기 조절
-- ✅ **선박 AIS 트래킹**: 선종별 아이콘, 이동 방향, 속도 비례 트레일
-- ✅ **KTX/지하철 트래킹**: 열차 실시간 위치 이동 애니메이션
-- ✅ **국방/사이버 시뮬레이션**: KADIZ 침범 궤적, DDoS 공격 빔 (ArcLayer)
-
-#### 2팀
-- ✅ **고속도로 혼잡도**: 구간별 소통 색상 (원활/서행/정체), 돌발 상황 마커
-- ✅ **기상/바람장**: 기온 격자, 미세먼지 3D 컬럼, 바람장 파티클
-- ✅ **재난/재해**: 산불 확산, 댐 수위, 지진 진앙 Ripple
-- ✅ **보건/의료**: 구급차 이동, 응급실 병상 현황
-- ✅ **사회적 약자**: Amber Alert Ripple, 독거노인 응급
-
-### Phase 4: 이벤트 기반 경보 시스템 및 최적화 — ✅ 완료
-
-#### 1팀
-- ✅ **시나리오 스크립트 엔진**: JSON 기반 타임라인 재생 (scenario-engine.ts)
-- ✅ **프리셋 시나리오**: 영토 침범, 대규모 교통사고, 사이버 공격, 복합 재난
-- ✅ **시나리오 재생 UI**: ScenarioPlayer 컴포넌트 (재생/일시정지/되감기)
-- ✅ **WebGL 성능 최적화**: LOD 4단계, RAF 기반 50ms 스로틀링
-- ✅ **Web Worker**: geo-filter.worker.ts (오프스레드 공간 필터링)
-- ✅ **뷰포트 유틸**: viewport-utils.ts (LOD 레벨, 피처 제한, 스타일 스케일링)
-- ✅ **군중 밀집도 관제**: HeatmapLayer 기반 밀집 히트맵 + 위험 경보
-
-#### 2팀
-- ✅ **크로스 도메인 경보 체인**: 10개 연계 룰 (아래 상세)
-- ✅ **경보 대시보드**: 3탭 (Active/History/Stats), 필터/검색, flyTo 연동
-- ✅ **112/119 출동 시뮬레이션**: 경찰서 7개 + 소방서 6개, 4개 출동 경로 애니메이션
-- ✅ **데이터 파이프라인 최적화**: 도메인별 차등 staleTime, exponential backoff, 장애 시 데이터 유지
-- ✅ **API 장애 HUD**: DataPipelineStatus 컴포넌트
-
-## 8. 크로스 도메인 경보 체인 룰 (10개)
+## 7. 크로스 도메인 경보 체인 룰 (10개)
 
 | # | 트리거 | 연계 경보 |
 |---|--------|-----------|
@@ -253,7 +198,7 @@ interface LayerConfig {
 - **인프라**: 전력 부하 ≥ 85% → warning
 - **치안**: 범죄 위험 가중치 ≥ 0.85 → warning
 
-## 9. 시나리오 프리셋 (4종)
+## 8. 시나리오 프리셋 (4종)
 
 | 시나리오 | 설명 | 시퀀스 |
 |---------|------|--------|
@@ -262,7 +207,7 @@ interface LayerConfig {
 | 사이버 공격 | DDoS 시작 → 공격 빔 → 방어 | flyTo → toggleLayer(cyber) → triggerAlert(critical) |
 | 복합 재난 | 지진 → 산불 → 대피 → 구급차 | flyTo → triggerAlert → toggleLayer(disaster) → toggleLayer(health) |
 
-## 10. 성능 최적화 상세
+## 9. 성능 최적화 상세
 
 ### LOD (Level of Detail) 4단계
 | 레벨 | 줌 범위 | 최대 피처 | 스타일 스케일 |
@@ -280,7 +225,7 @@ interface LayerConfig {
 - **GC Time 연장**: 10분 (장애 시 캐시 데이터 보존)
 - **placeholderData**: 마지막 성공 데이터 유지 (graceful degradation)
 
-## 11. 남은 작업 (향후 개선)
+## 10. 남은 작업 (향후 개선)
 
 ### 높은 우선순위
 - [ ] **실제 공공데이터 API 연동**: 현재 Mock 데이터 → 실제 API 키 설정 후 업스트림 URL 연결
@@ -302,7 +247,7 @@ interface LayerConfig {
 - [ ] E2E 테스트 (Playwright)
 - [ ] WebSocket 전환 (실시간성 높은 도메인)
 
-## 12. 실행 방법
+## 11. 실행 방법
 
 ```bash
 # 의존성 설치
