@@ -3,12 +3,8 @@
 import { useMemo } from 'react';
 import { ChevronRight, PanelRightClose, Radar, Siren, Target } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
-import StatusBadge from '@/components/ui/StatusBadge';
 import DataFeed from '@/components/ui/DataFeed';
-import MiniChart from '@/components/ui/MiniChart';
 import { useAppStore } from '@/stores/app-store';
-import { DOMAIN_REGISTRY } from '@/types/domain';
-import { DOMAIN_ICONS } from '@/lib/domain-icons';
 
 function formatValue(value: unknown): string {
   if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toFixed(2);
@@ -22,22 +18,10 @@ export default function StatusPanel() {
   const selectedObject = useAppStore((s) => s.selectedObject);
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen);
   const setRightPanelOpen = useAppStore((s) => s.setRightPanelOpen);
-  const layers = useAppStore((s) => s.layers);
+  const openAlertToast = useAppStore((s) => s.openAlertToast);
   const alerts = useAppStore((s) => s.alerts);
 
   const activeAlerts = useMemo(() => alerts.filter((alert) => !alert.dismissed), [alerts]);
-
-  const domainSummary = useMemo(() => {
-    return DOMAIN_REGISTRY.map((domain) => {
-      const domainLayers = Object.values(layers).filter((layer) => layer.domain === domain.id);
-      const visibleCount = domainLayers.filter((layer) => layer.visible).length;
-      return {
-        ...domain,
-        total: domainLayers.length,
-        visible: visibleCount,
-      };
-    }).filter((domain) => domain.total > 0);
-  }, [layers]);
 
   const selectedEntries = useMemo(() => {
     if (!selectedObject) return [];
@@ -113,43 +97,17 @@ export default function StatusPanel() {
       </GlassCard>
 
       <GlassCard
-        title="Domain Summary"
-        subtitle="Layer activity by domain"
-        rightSlot={<StatusBadge tone={activeAlerts.length > 0 ? 'warning' : 'active'}>{activeAlerts.length} ALERTS</StatusBadge>}
-        className="flex-1 overflow-hidden"
+        title="Live Feed"
+        subtitle="Alert engine stream"
+        className="overflow-hidden"
       >
-        <div className="space-y-2 overflow-y-auto pr-1 no-scrollbar">
-          {domainSummary.map((domain) => (
-            <div key={domain.id} className="rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2">
-              <div className="mb-1 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {(() => {
-                    const Icon = DOMAIN_ICONS[domain.id];
-                    return <Icon className="w-3.5 h-3.5" style={{ color: domain.color }} />;
-                  })()}
-                  <span className="text-[10px] tracking-[0.15em] text-cyan-400">{domain.nameKo}</span>
-                </div>
-                <StatusBadge tone={domain.visible > 0 ? 'active' : 'default'}>
-                  {domain.visible}/{domain.total}
-                </StatusBadge>
-              </div>
-              <MiniChart
-                values={[
-                  Math.max(domain.total - 2, 0),
-                  Math.max(domain.total - 1, 0),
-                  domain.total,
-                  Math.max(domain.visible - 1, 0),
-                  domain.visible,
-                ]}
-                stroke={domain.color}
-              />
-            </div>
-          ))}
+        <div className="max-h-[26rem] overflow-y-auto pr-1">
+          <DataFeed
+            items={feedItems}
+            emptyMessage="No active alerts"
+            onItemClick={(item) => openAlertToast(item.id)}
+          />
         </div>
-      </GlassCard>
-
-      <GlassCard title="Live Feed" subtitle="Alert engine stream" className="max-h-[32%] overflow-hidden">
-        <DataFeed items={feedItems} emptyMessage="No active alerts" />
       </GlassCard>
 
       <div className="pointer-events-none absolute inset-x-3 bottom-2 flex items-center justify-between text-[9px] tracking-[0.2em] text-cyan-800">

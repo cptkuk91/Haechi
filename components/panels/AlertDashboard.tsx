@@ -19,7 +19,7 @@ import { DOMAIN_ICONS } from '@/lib/domain-icons';
 import StatusBadge from '@/components/ui/StatusBadge';
 import type { Alert, AlertSeverity, DomainType } from '@/types/domain';
 
-type DashboardTab = 'active' | 'history' | 'stats';
+type DashboardTab = 'history' | 'stats';
 
 const SEVERITY_ORDER: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 };
 
@@ -36,7 +36,6 @@ export default function AlertDashboard() {
   const flyTo = useAppStore((s) => s.flyTo);
   const toggleLayer = useAppStore((s) => s.toggleLayer);
   const layers = useAppStore((s) => s.layers);
-  const dismissAlert = useAppStore((s) => s.dismissAlert);
   const dismissAllAlerts = useAppStore((s) => s.dismissAllAlerts);
   const clearDismissedAlerts = useAppStore((s) => s.clearDismissedAlerts);
   const clearAllAlerts = useAppStore((s) => s.clearAllAlerts);
@@ -45,7 +44,7 @@ export default function AlertDashboard() {
   const setAlertDomainEnabled = useAppStore((s) => s.setAlertDomainEnabled);
 
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<DashboardTab>('active');
+  const [tab, setTab] = useState<DashboardTab>('history');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSeverity, setFilterSeverity] = useState<AlertSeverity | 'all'>('all');
   const [filterDomain, setFilterDomain] = useState<DomainType | 'all'>('all');
@@ -55,8 +54,7 @@ export default function AlertDashboard() {
   const dismissedAlerts = useMemo(() => alerts.filter((a) => a.dismissed), [alerts]);
 
   const filteredAlerts = useMemo(() => {
-    const source = tab === 'active' ? activeAlerts : dismissedAlerts;
-    return source
+    return dismissedAlerts
       .filter((a) => {
         if (filterSeverity !== 'all' && a.severity !== filterSeverity) return false;
         if (filterDomain !== 'all' && a.domain !== filterDomain) return false;
@@ -71,7 +69,7 @@ export default function AlertDashboard() {
         return true;
       })
       .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || b.timestamp - a.timestamp);
-  }, [tab, activeAlerts, dismissedAlerts, filterSeverity, filterDomain, searchQuery]);
+  }, [dismissedAlerts, filterSeverity, filterDomain, searchQuery]);
 
   // 도메인별/등급별 통계
   const stats = useMemo(() => {
@@ -115,7 +113,7 @@ export default function AlertDashboard() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="absolute top-20 right-4 z-[70] flex items-center gap-2 rounded-xl border border-cyan-900/40 bg-[#0a0f14]/85 px-3 py-2.5 text-cyan-500 backdrop-blur-md transition-colors hover:border-cyan-700/50 hover:text-cyan-300 pointer-events-auto"
+        className="absolute left-4 top-[calc(50%+35vh+0.75rem)] z-[70] flex items-center gap-2 rounded-xl border border-cyan-900/40 bg-[#0a0f14]/85 px-3 py-2.5 text-cyan-500 backdrop-blur-md transition-colors hover:border-cyan-700/50 hover:text-cyan-300 pointer-events-auto"
       >
         <Activity className="h-4 w-4" />
         <span className="text-[10px] tracking-[0.2em] uppercase">Alerts</span>
@@ -134,9 +132,9 @@ export default function AlertDashboard() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="absolute top-20 right-4 z-[70] w-[380px] max-h-[70vh] flex flex-col rounded-2xl border border-cyan-900/40 bg-[#0a0f14]/90 shadow-2xl shadow-cyan-950/20 backdrop-blur-md pointer-events-auto"
+      className="absolute bottom-4 left-4 z-[70] w-[380px] max-h-[70vh] flex flex-col rounded-2xl border border-cyan-900/40 bg-[#0a0f14]/90 shadow-2xl shadow-cyan-950/20 backdrop-blur-md pointer-events-auto"
     >
       {/* 헤더 */}
       <div className="flex items-center justify-between p-3 pb-2 border-b border-cyan-900/30 shrink-0">
@@ -171,7 +169,7 @@ export default function AlertDashboard() {
 
       {/* 탭 */}
       <div className="flex border-b border-cyan-900/30 shrink-0">
-        {(['active', 'history', 'stats'] as DashboardTab[]).map((t) => (
+        {(['history', 'stats'] as DashboardTab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -181,7 +179,7 @@ export default function AlertDashboard() {
                 : 'text-cyan-700 hover:text-cyan-500'
             }`}
           >
-            {t === 'active' ? `Active (${activeAlerts.length})` : t === 'history' ? 'History' : 'Stats'}
+            {t === 'history' ? 'History' : 'Stats'}
           </button>
         ))}
       </div>
@@ -215,7 +213,7 @@ export default function AlertDashboard() {
 
       {/* 필터 */}
       <AnimatePresence>
-        {showFilters && tab !== 'stats' && (
+        {showFilters && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -352,8 +350,7 @@ export default function AlertDashboard() {
           <AlertListView
             alerts={filteredAlerts}
             onAlertClick={handleAlertClick}
-            onDismiss={tab === 'active' ? dismissAlert : undefined}
-            emptyMessage={tab === 'active' ? 'No active alerts' : 'No dismissed alerts'}
+            emptyMessage="No dismissed alerts"
           />
         )}
       </div>

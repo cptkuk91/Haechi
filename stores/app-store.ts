@@ -16,6 +16,7 @@ interface AppStore {
 
   // === 2팀 관리 ===
   alerts: Alert[];
+  toastAlertIds: string[];
   alertPreferences: AlertPreferences;
   rightPanelOpen: boolean;
 
@@ -30,6 +31,9 @@ interface AppStore {
 
   // === 2팀 액션 ===
   triggerAlert: (alert: Omit<Alert, 'id' | 'timestamp' | 'dismissed'>) => boolean;
+  openAlertToast: (id: string) => void;
+  closeAlertToast: (id: string) => void;
+  clearAlertToasts: () => void;
   dismissAlert: (id: string) => void;
   dismissAllAlerts: () => void;
   clearDismissedAlerts: () => void;
@@ -59,6 +63,7 @@ export const useAppStore = create<AppStore>((set) => ({
   camera: { ...KOREA_CENTER },
   selectedObject: null,
   alerts: [],
+  toastAlertIds: [],
   alertPreferences: {
     severities: { ...DEFAULT_ALERT_SEVERITIES },
     domains: { ...DEFAULT_ALERT_DOMAINS },
@@ -133,9 +138,32 @@ export const useAppStore = create<AppStore>((set) => ({
     return accepted;
   },
 
+  openAlertToast: (id) =>
+    set((s) => {
+      const exists = s.alerts.some((alert) => alert.id === id && !alert.dismissed);
+      if (!exists) return s;
+
+      const nextToastAlertIds = [id, ...s.toastAlertIds.filter((alertId) => alertId !== id)].slice(0, 4);
+      const unchanged =
+        nextToastAlertIds.length === s.toastAlertIds.length &&
+        nextToastAlertIds.every((alertId, index) => alertId === s.toastAlertIds[index]);
+
+      return unchanged ? s : { toastAlertIds: nextToastAlertIds };
+    }),
+
+  closeAlertToast: (id) =>
+    set((s) => {
+      const nextToastAlertIds = s.toastAlertIds.filter((alertId) => alertId !== id);
+      return nextToastAlertIds.length === s.toastAlertIds.length ? s : { toastAlertIds: nextToastAlertIds };
+    }),
+
+  clearAlertToasts: () =>
+    set((s) => (s.toastAlertIds.length > 0 ? { toastAlertIds: [] } : s)),
+
   dismissAlert: (id) =>
     set((s) => ({
       alerts: s.alerts.map((a) => (a.id === id ? { ...a, dismissed: true } : a)),
+      toastAlertIds: s.toastAlertIds.filter((alertId) => alertId !== id),
     })),
 
   dismissAllAlerts: () =>
@@ -146,17 +174,25 @@ export const useAppStore = create<AppStore>((set) => ({
         changed = true;
         return { ...a, dismissed: true };
       });
-      return changed ? { alerts: nextAlerts } : s;
+      if (!changed && s.toastAlertIds.length === 0) return s;
+      return { alerts: nextAlerts, toastAlertIds: [] };
     }),
 
   clearDismissedAlerts: () =>
     set((s) => {
       const nextAlerts = s.alerts.filter((a) => !a.dismissed);
-      return nextAlerts.length === s.alerts.length ? s : { alerts: nextAlerts };
+      const liveIdSet = new Set(nextAlerts.map((a) => a.id));
+      const nextToastAlertIds = s.toastAlertIds.filter((id) => liveIdSet.has(id));
+      const alertsUnchanged = nextAlerts.length === s.alerts.length;
+      const toastsUnchanged =
+        nextToastAlertIds.length === s.toastAlertIds.length &&
+        nextToastAlertIds.every((id, index) => id === s.toastAlertIds[index]);
+      if (alertsUnchanged && toastsUnchanged) return s;
+      return { alerts: nextAlerts, toastAlertIds: nextToastAlertIds };
     }),
 
   clearAllAlerts: () =>
-    set((s) => (s.alerts.length > 0 ? { alerts: [] } : s)),
+    set((s) => (s.alerts.length > 0 || s.toastAlertIds.length > 0 ? { alerts: [], toastAlertIds: [] } : s)),
 
   setAlertSeverityEnabled: (severity, enabled) =>
     set((s) => ({

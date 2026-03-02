@@ -44,14 +44,26 @@ function playAlertTone(severity: AlertSeverity): void {
 
 export default function AlertEngine() {
   const alerts = useAppStore((s) => s.alerts);
-  const dismissAlert = useAppStore((s) => s.dismissAlert);
+  const toastAlertIds = useAppStore((s) => s.toastAlertIds);
+  const closeAlertToast = useAppStore((s) => s.closeAlertToast);
   const flyTo = useAppStore((s) => s.flyTo);
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen);
 
   const seenAlertIds = useRef<Set<string>>(new Set());
-  const dismissTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  const activeAlerts = alerts.filter((alert) => !alert.dismissed).slice(0, 4);
+  const activeAlerts = toastAlertIds
+    .map((id) => alerts.find((alert) => alert.id === id))
+    .filter((alert): alert is NonNullable<typeof alert> => Boolean(alert && !alert.dismissed))
+    .slice(0, 4);
+
+  useEffect(() => {
+    const activeAlertIdSet = new Set(alerts.filter((alert) => !alert.dismissed).map((alert) => alert.id));
+    for (const toastAlertId of toastAlertIds) {
+      if (!activeAlertIdSet.has(toastAlertId)) {
+        closeAlertToast(toastAlertId);
+      }
+    }
+  }, [alerts, closeAlertToast, toastAlertIds]);
 
   useEffect(() => {
     for (const alert of activeAlerts) {
@@ -59,31 +71,8 @@ export default function AlertEngine() {
         seenAlertIds.current.add(alert.id);
         playAlertTone(alert.severity);
       }
-
-      if (alert.severity !== 'critical' && !dismissTimers.current[alert.id]) {
-        dismissTimers.current[alert.id] = setTimeout(() => {
-          dismissAlert(alert.id);
-          delete dismissTimers.current[alert.id];
-        }, 9500);
-      }
     }
-
-    return () => {
-      for (const [id, timer] of Object.entries(dismissTimers.current)) {
-        if (!activeAlerts.find((alert) => alert.id === id)) {
-          clearTimeout(timer);
-          delete dismissTimers.current[id];
-        }
-      }
-    };
-  }, [activeAlerts, dismissAlert]);
-
-  useEffect(() => {
-    return () => {
-      Object.values(dismissTimers.current).forEach((timer) => clearTimeout(timer));
-      dismissTimers.current = {};
-    };
-  }, []);
+  }, [activeAlerts, closeAlertToast]);
 
   return (
     <div
@@ -107,7 +96,7 @@ export default function AlertEngine() {
                 <p className="truncate text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200">{alert.title}</p>
               </div>
               <button
-                onClick={() => dismissAlert(alert.id)}
+                onClick={() => closeAlertToast(alert.id)}
                 className="rounded-md border border-cyan-900/40 p-1 text-cyan-600 transition-colors hover:border-cyan-700/60 hover:text-cyan-300"
                 aria-label={`Dismiss alert ${alert.title}`}
               >

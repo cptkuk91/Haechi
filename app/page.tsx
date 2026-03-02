@@ -29,7 +29,6 @@ import AlertDashboard from '@/components/panels/AlertDashboard';
 import WarningOverlay from '@/components/alert/WarningOverlay';
 import DataPipelineStatus from '@/components/alert/DataPipelineStatus';
 import Team2LayerBootstrap from '@/components/data/Team2LayerBootstrap';
-import ScenarioPlayer from '@/components/scenario/ScenarioPlayer';
 
 // Mapbox GL은 SSR 불가 → dynamic import
 const MapCanvas = dynamic(() => import('@/components/map/MapCanvas'), {
@@ -60,7 +59,6 @@ export default function Page() {
   const flyTo = useAppStore((s) => s.flyTo);
   const resetCamera = useAppStore((s) => s.resetCamera);
   const camera = useAppStore((s) => s.camera);
-  const activeAlertsCount = useAppStore((s) => s.alerts.filter((alert) => !alert.dismissed).length);
   const activeDomainCount = useAppStore(
     (s) => new Set(Object.values(s.layers).filter((layer) => layer.visible).map((layer) => layer.domain)).size
   );
@@ -226,7 +224,6 @@ export default function Page() {
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]" />
                 <span className="text-green-500/80">{activeDomainCount} DOMAINS ACTIVE</span>
               </div>
-              <p className="text-red-400/80 mt-1">ALERTS: {activeAlertsCount}</p>
             </div>
           </header>
 
@@ -244,9 +241,6 @@ export default function Page() {
 
           {/* ===== 데이터 파이프라인 상태 (2팀 Phase4) ===== */}
           <DataPipelineStatus />
-
-          {/* ===== 시나리오 재생기 (1팀 Phase4) ===== */}
-          <ScenarioPlayer />
 
           {/* ===== 하단 도시 네비게이션 바 ===== */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 pointer-events-auto">

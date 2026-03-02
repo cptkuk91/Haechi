@@ -14,9 +14,10 @@ export interface FeedItem {
 interface DataFeedProps {
   items: FeedItem[];
   emptyMessage?: string;
+  onItemClick?: (item: FeedItem) => void;
 }
 
-export default function DataFeed({ items, emptyMessage = 'No live events' }: DataFeedProps) {
+export default function DataFeed({ items, emptyMessage = 'No live events', onItemClick }: DataFeedProps) {
   if (items.length === 0) {
     return <p className="text-[10px] tracking-wider text-cyan-700">{emptyMessage}</p>;
   }
@@ -24,13 +25,21 @@ export default function DataFeed({ items, emptyMessage = 'No live events' }: Dat
   return (
     <ul className="space-y-2">
       {items.map((item) => (
-        <li key={item.id} className="rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2">
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <p className="truncate text-[10px] font-medium uppercase tracking-[0.2em] text-cyan-300">{item.title}</p>
-            {item.severity ? <StatusBadge tone={item.severity}>{item.severity}</StatusBadge> : null}
-          </div>
-          <p className="line-clamp-2 text-[10px] leading-relaxed text-cyan-600">{item.description}</p>
-          <p className="mt-1 text-[9px] tracking-wider text-cyan-800">{item.timestampLabel}</p>
+        <li key={item.id}>
+          <button
+            type="button"
+            onClick={() => onItemClick?.(item)}
+            className={`w-full rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2 text-left transition-colors ${
+              onItemClick ? 'cursor-pointer hover:bg-cyan-950/35' : 'cursor-default'
+            }`}
+          >
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <p className="truncate text-[10px] font-medium uppercase tracking-[0.2em] text-cyan-300">{item.title}</p>
+              {item.severity ? <StatusBadge tone={item.severity}>{item.severity}</StatusBadge> : null}
+            </div>
+            <p className="line-clamp-2 text-[10px] leading-relaxed text-cyan-600">{item.description}</p>
+            <p className="mt-1 text-[9px] tracking-wider text-cyan-800">{item.timestampLabel}</p>
+          </button>
         </li>
       ))}
     </ul>
