@@ -69,7 +69,7 @@ export default function Team2LayerBootstrap() {
 
         addLayer({
           ...layer,
-          visible: prevLayer?.visible ?? layer.visible,
+          visible: prevLayer?.visible ?? false,
           onClick: (feature) => {
             selectObject(
               toSelectedObjectFromFeature(feature, {
@@ -85,15 +85,16 @@ export default function Team2LayerBootstrap() {
       for (const alert of payload.alerts) {
         const key = `${payload.domain}:${alert.id}`;
         if (seenAlertIds.current.has(key)) continue;
-        seenAlertIds.current.add(key);
-
-        triggerAlert({
+        const accepted = triggerAlert({
           severity: alert.severity,
           domain: alert.domain,
           title: alert.title,
           message: alert.message,
           coordinates: alert.coordinates,
         });
+        if (accepted) {
+          seenAlertIds.current.add(key);
+        }
       }
     },
     [addLayer, selectObject, triggerAlert]

@@ -4,12 +4,14 @@ import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Activity,
+  BellRing,
   ChevronDown,
   Filter,
   MapPinned,
   Search,
   X,
   BarChart3,
+  Trash2,
 } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
 import { DOMAIN_REGISTRY } from '@/types/domain';
@@ -35,6 +37,12 @@ export default function AlertDashboard() {
   const toggleLayer = useAppStore((s) => s.toggleLayer);
   const layers = useAppStore((s) => s.layers);
   const dismissAlert = useAppStore((s) => s.dismissAlert);
+  const dismissAllAlerts = useAppStore((s) => s.dismissAllAlerts);
+  const clearDismissedAlerts = useAppStore((s) => s.clearDismissedAlerts);
+  const clearAllAlerts = useAppStore((s) => s.clearAllAlerts);
+  const alertPreferences = useAppStore((s) => s.alertPreferences);
+  const setAlertSeverityEnabled = useAppStore((s) => s.setAlertSeverityEnabled);
+  const setAlertDomainEnabled = useAppStore((s) => s.setAlertDomainEnabled);
 
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<DashboardTab>('active');
@@ -96,12 +104,18 @@ export default function AlertDashboard() {
   );
 
   const criticalCount = activeAlerts.filter((a) => a.severity === 'critical').length;
+  const totalEnabledPreferences =
+    Object.values(alertPreferences.severities).filter(Boolean).length +
+    Object.values(alertPreferences.domains).filter(Boolean).length;
+  const totalPreferenceSlots =
+    Object.keys(alertPreferences.severities).length +
+    Object.keys(alertPreferences.domains).length;
 
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="absolute bottom-16 right-4 z-[70] flex items-center gap-2 rounded-xl border border-cyan-900/40 bg-[#0a0f14]/85 px-3 py-2.5 text-cyan-500 backdrop-blur-md transition-colors hover:border-cyan-700/50 hover:text-cyan-300 pointer-events-auto"
+        className="absolute top-20 right-4 z-[70] flex items-center gap-2 rounded-xl border border-cyan-900/40 bg-[#0a0f14]/85 px-3 py-2.5 text-cyan-500 backdrop-blur-md transition-colors hover:border-cyan-700/50 hover:text-cyan-300 pointer-events-auto"
       >
         <Activity className="h-4 w-4" />
         <span className="text-[10px] tracking-[0.2em] uppercase">Alerts</span>
@@ -120,9 +134,9 @@ export default function AlertDashboard() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="absolute bottom-4 right-4 z-[70] w-[380px] max-h-[70vh] flex flex-col rounded-2xl border border-cyan-900/40 bg-[#0a0f14]/90 shadow-2xl shadow-cyan-950/20 backdrop-blur-md pointer-events-auto"
+      className="absolute top-20 right-4 z-[70] w-[380px] max-h-[70vh] flex flex-col rounded-2xl border border-cyan-900/40 bg-[#0a0f14]/90 shadow-2xl shadow-cyan-950/20 backdrop-blur-md pointer-events-auto"
     >
       {/* 헤더 */}
       <div className="flex items-center justify-between p-3 pb-2 border-b border-cyan-900/30 shrink-0">
@@ -172,6 +186,33 @@ export default function AlertDashboard() {
         ))}
       </div>
 
+      <div className="border-b border-cyan-900/30 p-2 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={dismissAllAlerts}
+            disabled={activeAlerts.length === 0}
+            className="flex-1 rounded-lg border border-cyan-900/40 px-2 py-1 text-[9px] uppercase tracking-[0.18em] font-mono text-cyan-500 transition-colors enabled:hover:border-cyan-700/50 enabled:hover:text-cyan-300 disabled:cursor-not-allowed disabled:border-cyan-950/40 disabled:text-cyan-900"
+          >
+            Active Clear
+          </button>
+          <button
+            onClick={clearDismissedAlerts}
+            disabled={dismissedAlerts.length === 0}
+            className="flex-1 rounded-lg border border-cyan-900/40 px-2 py-1 text-[9px] uppercase tracking-[0.18em] font-mono text-cyan-500 transition-colors enabled:hover:border-cyan-700/50 enabled:hover:text-cyan-300 disabled:cursor-not-allowed disabled:border-cyan-950/40 disabled:text-cyan-900"
+          >
+            History Clear
+          </button>
+          <button
+            onClick={clearAllAlerts}
+            disabled={alerts.length === 0}
+            className="inline-flex items-center justify-center rounded-lg border border-red-900/40 px-2 py-1 text-[9px] uppercase tracking-[0.18em] font-mono text-red-500 transition-colors enabled:hover:border-red-700/50 enabled:hover:text-red-300 disabled:cursor-not-allowed disabled:border-red-950/30 disabled:text-red-950/70"
+            aria-label="Clear all alerts"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+
       {/* 필터 */}
       <AnimatePresence>
         {showFilters && tab !== 'stats' && (
@@ -182,62 +223,121 @@ export default function AlertDashboard() {
             className="overflow-hidden border-b border-cyan-900/30 shrink-0"
           >
             <div className="p-2 space-y-2">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-cyan-800" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search alerts..."
-                  className="w-full bg-cyan-950/30 border border-cyan-900/30 rounded-lg pl-7 pr-3 py-1.5 text-[10px] text-cyan-300 placeholder-cyan-800 focus:outline-none focus:border-cyan-700/50 font-mono"
-                />
+              <div className="rounded-lg border border-cyan-900/30 bg-cyan-950/15 p-2">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.2em] text-cyan-500 font-mono">
+                    <BellRing className="h-3 w-3" />
+                    Intake
+                  </span>
+                  <span className="text-[8px] text-cyan-700 font-mono">
+                    {totalEnabledPreferences}/{totalPreferenceSlots}
+                  </span>
+                </div>
+                <div className="flex gap-1.5 mb-1.5">
+                  {(['critical', 'warning', 'info'] as const).map((severity) => {
+                    const enabled = alertPreferences.severities[severity];
+                    return (
+                      <button
+                        key={severity}
+                        onClick={() => setAlertSeverityEnabled(severity, !enabled)}
+                        className={`px-2 py-1 rounded-lg text-[9px] uppercase tracking-wider font-mono transition-colors ${
+                          enabled
+                            ? severity === 'critical'
+                              ? 'bg-red-950/60 border border-red-500/40 text-red-300'
+                              : severity === 'warning'
+                                ? 'bg-amber-950/60 border border-amber-500/40 text-amber-300'
+                                : 'bg-blue-950/60 border border-blue-500/40 text-blue-300'
+                            : 'text-cyan-800 border border-cyan-950/60 hover:text-cyan-500'
+                        }`}
+                      >
+                        {severity}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {DOMAIN_REGISTRY.map((domain) => {
+                    const Icon = DOMAIN_ICONS[domain.id];
+                    const enabled = alertPreferences.domains[domain.id];
+                    return (
+                      <button
+                        key={domain.id}
+                        onClick={() => setAlertDomainEnabled(domain.id, !enabled)}
+                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[8px] font-mono transition-colors ${
+                          enabled
+                            ? 'bg-cyan-900/35 text-cyan-300 border border-cyan-800/40'
+                            : 'text-cyan-800 border border-cyan-950/50 hover:text-cyan-500'
+                        }`}
+                      >
+                        <Icon className="h-2.5 w-2.5" style={{ color: domain.color }} />
+                        {domain.nameKo.slice(0, 4)}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex gap-1.5">
-                {(['all', 'critical', 'warning', 'info'] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setFilterSeverity(s)}
-                    className={`px-2 py-1 rounded-lg text-[9px] uppercase tracking-wider font-mono transition-colors ${
-                      filterSeverity === s
-                        ? s === 'critical' ? 'bg-red-950/50 border border-red-500/40 text-red-300'
-                          : s === 'warning' ? 'bg-amber-950/50 border border-amber-500/40 text-amber-300'
-                          : s === 'info' ? 'bg-blue-950/50 border border-blue-500/40 text-blue-300'
-                          : 'bg-cyan-900/40 border border-cyan-700/40 text-cyan-300'
-                        : 'text-cyan-700 border border-transparent hover:text-cyan-500'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-1 flex-wrap">
-                <button
-                  onClick={() => setFilterDomain('all')}
-                  className={`px-2 py-0.5 rounded text-[8px] uppercase tracking-wider font-mono transition-colors ${
-                    filterDomain === 'all'
-                      ? 'bg-cyan-900/40 text-cyan-300'
-                      : 'text-cyan-700 hover:text-cyan-500'
-                  }`}
-                >
-                  All
-                </button>
-                {DOMAIN_REGISTRY.filter((d) => stats.byDomain[d.id]).map((d) => {
-                  const Icon = DOMAIN_ICONS[d.id];
-                  return (
+
+              <div className="rounded-lg border border-cyan-900/30 bg-cyan-950/15 p-2">
+                <div className="mb-1.5 text-[9px] uppercase tracking-[0.2em] text-cyan-500 font-mono">
+                  View Filter
+                </div>
+                <div className="relative mb-1.5">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-cyan-800" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search alerts..."
+                    className="w-full bg-cyan-950/30 border border-cyan-900/30 rounded-lg pl-7 pr-3 py-1.5 text-[10px] text-cyan-300 placeholder-cyan-800 focus:outline-none focus:border-cyan-700/50 font-mono"
+                  />
+                </div>
+                <div className="flex gap-1.5 mb-1.5">
+                  {(['all', 'critical', 'warning', 'info'] as const).map((s) => (
                     <button
-                      key={d.id}
-                      onClick={() => setFilterDomain(d.id)}
-                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono transition-colors ${
-                        filterDomain === d.id
-                          ? 'bg-cyan-900/40 text-cyan-300'
-                          : 'text-cyan-700 hover:text-cyan-500'
+                      key={s}
+                      onClick={() => setFilterSeverity(s)}
+                      className={`px-2 py-1 rounded-lg text-[9px] uppercase tracking-wider font-mono transition-colors ${
+                        filterSeverity === s
+                          ? s === 'critical' ? 'bg-red-950/50 border border-red-500/40 text-red-300'
+                            : s === 'warning' ? 'bg-amber-950/50 border border-amber-500/40 text-amber-300'
+                            : s === 'info' ? 'bg-blue-950/50 border border-blue-500/40 text-blue-300'
+                            : 'bg-cyan-900/40 border border-cyan-700/40 text-cyan-300'
+                          : 'text-cyan-700 border border-transparent hover:text-cyan-500'
                       }`}
                     >
-                      <Icon className="w-2.5 h-2.5" style={{ color: d.color }} />
-                      {stats.byDomain[d.id]}
+                      {s}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  <button
+                    onClick={() => setFilterDomain('all')}
+                    className={`px-2 py-0.5 rounded text-[8px] uppercase tracking-wider font-mono transition-colors ${
+                      filterDomain === 'all'
+                        ? 'bg-cyan-900/40 text-cyan-300'
+                        : 'text-cyan-700 hover:text-cyan-500'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {DOMAIN_REGISTRY.filter((d) => stats.byDomain[d.id]).map((d) => {
+                    const Icon = DOMAIN_ICONS[d.id];
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => setFilterDomain(d.id)}
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono transition-colors ${
+                          filterDomain === d.id
+                            ? 'bg-cyan-900/40 text-cyan-300'
+                            : 'text-cyan-700 hover:text-cyan-500'
+                        }`}
+                      >
+                        <Icon className="w-2.5 h-2.5" style={{ color: d.color }} />
+                        {stats.byDomain[d.id]}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </motion.div>

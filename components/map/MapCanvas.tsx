@@ -98,56 +98,16 @@ export default function MapCanvas() {
       style: MAPBOX_STYLE,
       center: [KOREA_CENTER.longitude, KOREA_CENTER.latitude],
       zoom: KOREA_CENTER.zoom,
-      pitch: KOREA_CENTER.pitch,
-      bearing: KOREA_CENTER.bearing,
+      pitch: 0,
+      bearing: 0,
       antialias: true,
-      projection: 'globe',
+      projection: 'mercator',
+      dragRotate: false,
+      pitchWithRotate: false,
+      maxPitch: 0,
     });
-
-    // 다크 분위기 강화
-    map.on('style.load', () => {
-      map.setFog({
-        color: 'rgb(5, 5, 15)',
-        'high-color': 'rgb(10, 14, 26)',
-        'horizon-blend': 0.08,
-        'space-color': 'rgb(5, 5, 10)',
-        'star-intensity': 0.6,
-      });
-
-      const labelLayerId = map.getStyle()?.layers?.find(
-        (layer) => layer.type === 'symbol' && layer.layout?.['text-field']
-      )?.id;
-
-      if (labelLayerId) {
-        map.addLayer(
-          {
-            id: '3d-buildings',
-            source: 'composite',
-            'source-layer': 'building',
-            filter: ['==', 'extrude', 'true'],
-            type: 'fill-extrusion',
-            minzoom: 12,
-            paint: {
-              'fill-extrusion-color': '#0a0e1a',
-              'fill-extrusion-height': ['get', 'height'],
-              'fill-extrusion-base': ['get', 'min_height'],
-              'fill-extrusion-opacity': 0.7,
-            },
-          },
-          labelLayerId
-        );
-      }
-
-      if (!map.getSource('mapbox-dem')) {
-        map.addSource('mapbox-dem', {
-          type: 'raster-dem',
-          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-          tileSize: 512,
-          maxzoom: 14,
-        });
-        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-      }
-    });
+    map.dragRotate.disable();
+    map.touchZoomRotate.disableRotation();
 
     // Deck.gl 오버레이
     const overlay = new MapboxOverlay({
@@ -158,7 +118,7 @@ export default function MapCanvas() {
     overlayRef.current = overlay;
 
     map.addControl(
-      new mapboxgl.NavigationControl({ visualizePitch: true }),
+      new mapboxgl.NavigationControl({ visualizePitch: false }),
       'bottom-right'
     );
 
@@ -174,8 +134,8 @@ export default function MapCanvas() {
         latitude: center.lat,
         longitude: center.lng,
         zoom: map.getZoom(),
-        pitch: map.getPitch(),
-        bearing: map.getBearing(),
+        pitch: 0,
+        bearing: 0,
       });
       updateBuildContext();
     });
@@ -217,13 +177,13 @@ export default function MapCanvas() {
       map.flyTo({
         center: [camera.longitude, camera.latitude],
         zoom: camera.zoom,
-        pitch: camera.pitch,
-        bearing: camera.bearing,
+        pitch: 0,
+        bearing: 0,
         duration: 2000,
         essential: true,
       });
     }
-  }, [camera.latitude, camera.longitude, camera.zoom, camera.pitch, camera.bearing, mapLoaded]);
+  }, [camera.latitude, camera.longitude, camera.zoom, mapLoaded]);
 
   // RAF 기반 Deck.gl 레이어 업데이트 스케줄러
   const scheduleDeckUpdate = useCallback(() => {

@@ -1,7 +1,7 @@
 // 성능 최적화 Deck.gl 레이어 빌더
 // LOD 기반 스타일 스케일링 + 뷰포트 필터링 통합
 
-import { GeoJsonLayer, PathLayer, ArcLayer, ScatterplotLayer, ColumnLayer } from '@deck.gl/layers';
+import { GeoJsonLayer, PathLayer, ScatterplotLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import type { LayerConfig } from '@/types/domain';
 import { getLODLevel, getLODStyle, filterByViewport, type ViewportBounds, type LODLevel } from './viewport-utils';
@@ -38,6 +38,23 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function toPastelColor(
+  color: [number, number, number, number],
+  options?: { mix?: number; alphaScale?: number; minAlpha?: number; maxAlpha?: number }
+): [number, number, number, number] {
+  const mix = options?.mix ?? 0.4;
+  const alphaScale = options?.alphaScale ?? 0.76;
+  const minAlpha = options?.minAlpha ?? 40;
+  const maxAlpha = options?.maxAlpha ?? 220;
+  const [r, g, b, a] = color;
+  return [
+    Math.round(r + (255 - r) * mix),
+    Math.round(g + (255 - g) * mix),
+    Math.round(b + (255 - b) * mix),
+    clamp(Math.round(a * alphaScale), minAlpha, maxAlpha),
+  ];
+}
+
 function getDynamicLineColor(
   feature: GeoJSON.Feature,
   fallback: [number, number, number, number]
@@ -47,27 +64,24 @@ function getDynamicLineColor(
   const pulse = clamp(toFiniteNumber(properties.pulse) ?? 0.75, 0.2, 1.15);
 
   if (explicitColor) {
-    return [
-      explicitColor[0],
-      explicitColor[1],
-      explicitColor[2],
-      clamp(Math.round(explicitColor[3] * pulse), 45, 255),
-    ];
+    const pastel = toPastelColor(explicitColor);
+    return [pastel[0], pastel[1], pastel[2], clamp(Math.round(pastel[3] * pulse), 45, 225)];
   }
 
   const congestion = toFiniteNumber(properties.congestion);
   if (congestion !== null) {
-    const alpha = clamp(Math.round((175 + congestion * 70) * pulse), 50, 255);
-    if (congestion >= 0.82) return [255, 51, 68, alpha];
-    if (congestion >= 0.58) return [255, 184, 0, alpha];
-    return [16, 185, 129, alpha];
+    const alpha = clamp(Math.round((140 + congestion * 55) * pulse), 45, 210);
+    if (congestion >= 0.82) return [247, 182, 192, alpha];
+    if (congestion >= 0.58) return [251, 214, 167, alpha];
+    return [179, 227, 207, alpha];
   }
 
+  const pastelFallback = toPastelColor(fallback);
   return [
-    fallback[0],
-    fallback[1],
-    fallback[2],
-    clamp(Math.round(fallback[3] * pulse), 40, 255),
+    pastelFallback[0],
+    pastelFallback[1],
+    pastelFallback[2],
+    clamp(Math.round(pastelFallback[3] * pulse), 40, 220),
   ];
 }
 
@@ -146,35 +160,40 @@ export function buildDeckLayer(config: LayerConfig, ctx: BuildContext) {
 
   switch (config.type) {
     case 'marker':
-    case 'icon':
+    case 'icon': {
+      const markerColor = toPastelColor(parseColor(config.style.color) ?? [92, 181, 255, 210], {
+        mix: 0.34,
+        alphaScale: 0.82,
+      });
       return new ScatterplotLayer({
         ...baseProps,
         getPosition: (d: GeoJSON.Feature) => featureToPoint(d),
         getRadius: (config.style.radius || 500) * lodStyle.radiusScale,
-        getFillColor: parseColor(config.style.color) || [0, 240, 255, 200],
+        getFillColor: markerColor,
         radiusMinPixels: lod === 'overview' ? 3 : 4,
-        radiusMaxPixels: lod === 'street' ? 30 : 20,
-        stroked: lod !== 'overview', // overview에서 stroke 생략 (성능)
-        getLineColor: [255, 255, 255, 80],
+        radiusMaxPixels: lod === 'street' ? 24 : 18,
+        stroked: true,
+        getLineColor: [242, 247, 255, 150],
         lineWidthMinPixels: 1,
         opacity: lodStyle.opacity,
       });
+    }
 
-    case 'polygon':
+    case 'polygon': {
+      const polygonBase = parseColor(config.style.color) ?? [255, 119, 140, 140];
       return new GeoJsonLayer({
         ...baseProps,
         data: { type: 'FeatureCollection' as const, features },
-        getFillColor: parseColor(config.style.color) || [255, 51, 68, 60],
-        getLineColor: parseColor(config.style.color) || [255, 51, 68, 180],
+        getFillColor: toPastelColor(polygonBase, { mix: 0.44, alphaScale: 0.46 }),
+        getLineColor: toPastelColor(polygonBase, { mix: 0.3, alphaScale: 0.9 }),
         lineWidthMinPixels: lod === 'overview' ? 0.5 : 1,
-        extruded: lod !== 'overview' && !!config.style.elevation,
-        getElevation: config.style.elevation || 0,
+        extruded: false,
         opacity: (config.style.opacity ?? 0.6) * lodStyle.opacity,
       });
+    }
 
-    case 'line':
-      {
-        const defaultLineColor = parseColor(config.style.color) || [0, 240, 255, 180];
+    case 'line': {
+      const defaultLineColor = parseColor(config.style.color) ?? [92, 181, 255, 190];
 
       return new PathLayer({
         ...baseProps,
@@ -188,8 +207,8 @@ export function buildDeckLayer(config: LayerConfig, ctx: BuildContext) {
           return baseWidth * lodStyle.lineWidthScale * (0.85 + pulse * 0.32);
         },
         widthMinPixels: lod === 'overview' ? 1 : 2,
-        capRounded: lod !== 'overview',
-        jointRounded: lod !== 'overview',
+        capRounded: true,
+        jointRounded: true,
       });
     }
 
@@ -204,41 +223,68 @@ export function buildDeckLayer(config: LayerConfig, ctx: BuildContext) {
         intensity: 1,
         threshold: 0.1,
         colorRange: [
-          [0, 240, 255, 0] as [number, number, number, number],
-          [0, 240, 255, 80] as [number, number, number, number],
-          [255, 184, 0, 150] as [number, number, number, number],
-          [255, 51, 68, 200] as [number, number, number, number],
-          [255, 51, 68, 255] as [number, number, number, number],
+          [199, 233, 255, 0] as [number, number, number, number],
+          [179, 222, 255, 85] as [number, number, number, number],
+          [191, 234, 224, 130] as [number, number, number, number],
+          [248, 216, 182, 190] as [number, number, number, number],
+          [246, 182, 194, 235] as [number, number, number, number],
         ],
       });
 
-    case 'arc':
-      return new ArcLayer({
-        ...baseProps,
-        getSourcePosition: (d: GeoJSON.Feature) => (d.properties as Record<string, unknown>)?.source as [number, number] || featureToPoint(d),
-        getTargetPosition: (d: GeoJSON.Feature) => (d.properties as Record<string, unknown>)?.target as [number, number] || [127.5, 36.5],
-        getSourceColor: [255, 51, 68, 200],
-        getTargetColor: [0, 240, 255, 200],
-        getWidth: (config.style.lineWidth || 2) * lodStyle.lineWidthScale,
-        greatCircle: true,
+    case 'arc': {
+      const arcColor = toPastelColor(parseColor(config.style.color) ?? [141, 156, 255, 200], {
+        mix: 0.36,
+        alphaScale: 0.84,
       });
-
-    case 'column':
-      return new ColumnLayer({
+      return new PathLayer({
         ...baseProps,
-        diskResolution: lod === 'overview' ? 8 : lod === 'city' ? 12 : 16,
-        radius: (config.style.radius ?? 900) * lodStyle.radiusScale,
-        extruded: true,
+        getPath: ((d: GeoJSON.Feature) => {
+          const props = (d.properties as Record<string, unknown> | null) ?? {};
+          const source = (props.source as [number, number] | undefined) ?? featureToPoint(d);
+          const target = (props.target as [number, number] | undefined) ?? [127.5, 36.5];
+          return [source, target];
+        }) as any,
+        getColor: arcColor,
+        getWidth: (config.style.lineWidth || 2) * lodStyle.lineWidthScale,
+        widthMinPixels: lod === 'overview' ? 1 : 2,
+        capRounded: true,
+        jointRounded: true,
+      });
+    }
+
+    case 'column': {
+      const columnFill = toPastelColor(parseColor(config.style.color) ?? [125, 189, 255, 190], {
+        mix: 0.28,
+        alphaScale: 0.78,
+      });
+      return new ScatterplotLayer({
+        ...baseProps,
         getPosition: (d: GeoJSON.Feature) => featureToPoint(d),
-        getElevation: (d: GeoJSON.Feature) =>
-          Number((d.properties as Record<string, unknown>)?.rainMm ?? (d.properties as Record<string, unknown>)?.value ?? (d.properties as Record<string, unknown>)?.intensity ?? config.style.elevation ?? 600),
-        elevationScale: 12,
-        getFillColor: parseColor(config.style.color) || [59, 130, 246, 180],
-        getLineColor: [255, 255, 255, 80],
+        getRadius: (d: GeoJSON.Feature) => {
+          const props = (d.properties as Record<string, unknown> | null) ?? {};
+          const raw =
+            toFiniteNumber(props.rainMm) ??
+            toFiniteNumber(props.value) ??
+            toFiniteNumber(props.intensity) ??
+            toFiniteNumber(config.style.elevation) ??
+            600;
+          const valueScale = clamp(raw / 520, 0.9, 3.1);
+          return (config.style.radius ?? 380) * lodStyle.radiusScale * valueScale;
+        },
+        radiusMinPixels: lod === 'overview' ? 3 : 4,
+        radiusMaxPixels: lod === 'street' ? 28 : 20,
+        getFillColor: columnFill,
+        stroked: true,
+        getLineColor: [236, 244, 255, 125],
         lineWidthMinPixels: 1,
       });
+    }
 
-    case 'particle':
+    case 'particle': {
+      const particleColor = toPastelColor(parseColor(config.style.color) ?? [126, 228, 240, 190], {
+        mix: 0.34,
+        alphaScale: 0.82,
+      });
       return new ScatterplotLayer({
         ...baseProps,
         getPosition: (d: GeoJSON.Feature) => featureToPoint(d),
@@ -248,19 +294,22 @@ export function buildDeckLayer(config: LayerConfig, ctx: BuildContext) {
           return Math.max(config.style.radius ?? 300, speed * 22) * lodStyle.radiusScale;
         },
         radiusMinPixels: 2,
-        radiusMaxPixels: 26,
+        radiusMaxPixels: 22,
         stroked: false,
         opacity: (config.style.opacity ?? 0.68) * lodStyle.opacity,
-        getFillColor: parseColor(config.style.color) || [34, 211, 238, 190],
+        getFillColor: particleColor,
       });
+    }
 
-    default:
+    default: {
+      const defaultBase = parseColor(config.style.color) ?? [120, 186, 255, 160];
       return new GeoJsonLayer({
         ...baseProps,
         data: { type: 'FeatureCollection' as const, features },
-        getFillColor: parseColor(config.style.color) || [0, 240, 255, 100],
-        getLineColor: [0, 240, 255, 180],
+        getFillColor: toPastelColor(defaultBase, { mix: 0.42, alphaScale: 0.5 }),
+        getLineColor: toPastelColor(defaultBase, { mix: 0.3, alphaScale: 0.88 }),
         lineWidthMinPixels: 1,
       });
+    }
   }
 }

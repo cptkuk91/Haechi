@@ -35,9 +35,9 @@ export const KOREA_CENTER = {
   latitude: 36.5,
   longitude: 127.5,
   zoom: 7,
-  pitch: 45,
+  pitch: 0,
   bearing: 0,
 } as const;
 
-// Mapbox 다크 스타일
+// Mapbox 2D 다크 스타일
 export const MAPBOX_STYLE = 'mapbox://styles/mapbox/dark-v11';
