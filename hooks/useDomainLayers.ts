@@ -23,7 +23,7 @@ export function useDomainLayers() {
       {
         id: 'cctv-markers',
         domain: 'cctv',
-        name: 'CCTV 감시 카메라',
+        name: 'CCTV 위치',
         type: 'marker',
         visible: false,
         data: getCCTVGeoJSON(),

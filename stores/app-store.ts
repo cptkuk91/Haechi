@@ -8,6 +8,13 @@ interface AlertPreferences {
   domains: Record<DomainType, boolean>;
 }
 
+export interface MapBounds {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
 interface AppStore {
   // === 1팀 관리 ===
   layers: Record<string, LayerConfig>;
@@ -21,6 +28,8 @@ interface AppStore {
   rightPanelOpen: boolean;
   domainDataSource: Partial<Record<DomainType, 'mock' | 'upstream'>>;
   layerDataSource: Record<string, 'mock' | 'upstream'>;
+  cctvMaxDisplayCount: number;
+  mapBounds: MapBounds | null;
 
   // === 1팀 액션 ===
   addLayer: (layer: LayerConfig) => void;
@@ -45,6 +54,8 @@ interface AppStore {
   setRightPanelOpen: (open: boolean) => void;
   setDomainDataSource: (domain: DomainType, source: 'mock' | 'upstream') => void;
   setLayerDataSource: (layerId: string, source: 'mock' | 'upstream') => void;
+  setCctvMaxDisplayCount: (count: number) => void;
+  setMapBounds: (bounds: MapBounds | null) => void;
 
   // === 공유 액션 ===
   resetCamera: () => void;
@@ -61,6 +72,16 @@ const DEFAULT_ALERT_DOMAINS = DOMAIN_REGISTRY.reduce<Record<DomainType, boolean>
   return acc;
 }, {} as Record<DomainType, boolean>);
 
+const MIN_CCTV_MAX_DISPLAY_COUNT = 100;
+const MAX_CCTV_MAX_DISPLAY_COUNT = 20_000;
+const DEFAULT_CCTV_MAX_DISPLAY_COUNT = 100;
+
+function sanitizeCctvMaxDisplayCount(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_CCTV_MAX_DISPLAY_COUNT;
+  const normalized = Math.floor(value);
+  return Math.min(MAX_CCTV_MAX_DISPLAY_COUNT, Math.max(MIN_CCTV_MAX_DISPLAY_COUNT, normalized));
+}
+
 export const useAppStore = create<AppStore>((set) => ({
   // --- 초기 상태 ---
   layers: {},
@@ -75,6 +96,8 @@ export const useAppStore = create<AppStore>((set) => ({
   rightPanelOpen: true,
   domainDataSource: {},
   layerDataSource: {},
+  cctvMaxDisplayCount: DEFAULT_CCTV_MAX_DISPLAY_COUNT,
+  mapBounds: null,
 
   // --- 1팀 액션 ---
   addLayer: (layer) =>
@@ -244,6 +267,30 @@ export const useAppStore = create<AppStore>((set) => ({
           [layerId]: source,
         },
       };
+    }),
+
+  setCctvMaxDisplayCount: (count) =>
+    set((s) => {
+      const normalized = sanitizeCctvMaxDisplayCount(count);
+      if (s.cctvMaxDisplayCount === normalized) return s;
+      return { cctvMaxDisplayCount: normalized };
+    }),
+
+  setMapBounds: (bounds) =>
+    set((s) => {
+      if (!bounds && !s.mapBounds) return s;
+      if (!bounds && s.mapBounds) return { mapBounds: null };
+      if (!bounds) return s;
+      if (
+        s.mapBounds
+        && s.mapBounds.west === bounds.west
+        && s.mapBounds.south === bounds.south
+        && s.mapBounds.east === bounds.east
+        && s.mapBounds.north === bounds.north
+      ) {
+        return s;
+      }
+      return { mapBounds: bounds };
     }),
 
   // --- 공유 ---

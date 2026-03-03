@@ -159,14 +159,14 @@ async function fetchNoFlyPage(args: {
 }
 
 export async function GET() {
-  const key = process.env.TEAM2_AVIATION_NO_FLY_API_KEY;
+  const key = process.env.TEAM2_DIGITAL_TWIN_API_KEY;
   if (!key) {
     return NextResponse.json(
       {
         source: 'mock',
         updatedAt: new Date().toISOString(),
         data: emptyFeatureCollection(),
-        warnings: ['Missing env: TEAM2_AVIATION_NO_FLY_API_KEY'],
+        warnings: ['Missing env: TEAM2_DIGITAL_TWIN_API_KEY'],
       },
       {
         headers: {
@@ -177,7 +177,7 @@ export async function GET() {
     );
   }
 
-  const domain = process.env.TEAM2_AVIATION_NO_FLY_API_DOMAIN;
+  const domain = process.env.TEAM2_DIGITAL_TWIN_API_DOMAIN;
   const geomFilter = process.env.TEAM2_AVIATION_NO_FLY_GEOM_FILTER ?? DEFAULT_GEOM_FILTER;
   const pageSize = toPositiveInt(process.env.TEAM2_AVIATION_NO_FLY_PAGE_SIZE, DEFAULT_PAGE_SIZE);
 

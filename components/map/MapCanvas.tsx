@@ -5,7 +5,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { useAppStore } from '@/stores/app-store';
-import { KOREA_CENTER, MAPBOX_STYLE } from '@/styles/theme';
+import { MAPBOX_STYLE } from '@/styles/theme';
 import { buildDeckLayer, type BuildContext } from '@/lib/layer-builder';
 import { getMapBounds } from '@/lib/viewport-utils';
 
@@ -23,6 +23,8 @@ export default function MapCanvas() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [showFPS, setShowFPS] = useState(false);
 
+  const { layers, camera, setCamera, setMapBounds } = useAppStore();
+
   // 성능 추적 ref
   const lastLayerUpdate = useRef(0);
   const pendingRAF = useRef<number | null>(null);
@@ -30,14 +32,12 @@ export default function MapCanvas() {
   const fpsRef = useRef({ frames: 0, lastTime: performance.now(), fps: 0 });
   const fpsDisplayRef = useRef<HTMLDivElement>(null);
   const buildContextRef = useRef<BuildContext>({
-    zoom: KOREA_CENTER.zoom,
+    zoom: camera.zoom,
     bounds: { west: 124, south: 33, east: 132, north: 39 },
   });
 
   // Worker ref
   const workerRef = useRef<Worker | null>(null);
-
-  const { layers, camera, setCamera } = useAppStore();
 
   // Web Worker 초기화
   useEffect(() => {
@@ -96,8 +96,8 @@ export default function MapCanvas() {
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: MAPBOX_STYLE,
-      center: [KOREA_CENTER.longitude, KOREA_CENTER.latitude],
-      zoom: KOREA_CENTER.zoom,
+      center: [camera.longitude, camera.latitude],
+      zoom: camera.zoom,
       pitch: 0,
       bearing: 0,
       antialias: true,
@@ -124,6 +124,7 @@ export default function MapCanvas() {
 
     map.on('load', () => {
       updateBuildContext();
+      setMapBounds(getMapBounds(map));
       setMapLoaded(true);
     });
 
@@ -137,6 +138,7 @@ export default function MapCanvas() {
         pitch: 0,
         bearing: 0,
       });
+      setMapBounds(getMapBounds(map));
       updateBuildContext();
     });
 
@@ -159,7 +161,7 @@ export default function MapCanvas() {
       overlayRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setCamera]);
+  }, [setCamera, setMapBounds]);
 
   // 카메라 flyTo 반응
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, ChevronDown, ChevronRight, Layers, Search, X } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
@@ -8,11 +8,37 @@ import { DOMAIN_REGISTRY } from '@/types/domain';
 import { DOMAIN_ICONS } from '@/lib/domain-icons';
 import type { LayerConfig } from '@/types/domain';
 
+const CCTV_MAX_DISPLAY_OPTIONS = [100, 500, 1000, 2000, 5000, 10000, 20000] as const;
+const CCTV_MIN_DISPLAY = 100;
+const CCTV_MAX_DISPLAY = 20_000;
+
 export default function LayerPanel() {
-  const { layers, toggleLayer, layerDataSource } = useAppStore();
+  const {
+    layers,
+    toggleLayer,
+    layerDataSource,
+    cctvMaxDisplayCount,
+    setCctvMaxDisplayCount,
+  } = useAppStore();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [cctvCustomInput, setCctvCustomInput] = useState(String(cctvMaxDisplayCount));
+
+  useEffect(() => {
+    setCctvCustomInput(String(cctvMaxDisplayCount));
+  }, [cctvMaxDisplayCount]);
+
+  const commitCctvCustomInput = () => {
+    const parsed = Number(cctvCustomInput);
+    if (!Number.isFinite(parsed)) {
+      setCctvCustomInput(String(cctvMaxDisplayCount));
+      return;
+    }
+    const normalized = Math.min(CCTV_MAX_DISPLAY, Math.max(CCTV_MIN_DISPLAY, Math.floor(parsed)));
+    setCctvMaxDisplayCount(normalized);
+    setCctvCustomInput(String(normalized));
+  };
 
   const toggleDomain = (domain: string) => {
     setExpandedDomains((prev) => {
@@ -167,10 +193,61 @@ export default function LayerPanel() {
                                     ? '서울 실시간 돌발정보 (완료)'
                                     : layer.id === 'no-fly-zones' && layerDataSource[layer.id] === 'upstream'
                                       ? '비행금지구역 (완료)'
+                                    : layer.id === 'cctv-markers' && layerDataSource[layer.id] === 'upstream'
+                                      ? 'CCTV 위치 (완료)'
                                     : undefined
                                 }
                                 onToggle={() => toggleLayer(layer.id)}
-                              />
+                              >
+                                {layer.id === 'cctv-markers' && layer.visible && (
+                                  <div className="px-2 pb-2">
+                                    <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                      <span className="text-[9px] tracking-wider text-cyan-200 font-mono">
+                                        Max Markers
+                                      </span>
+                                      <select
+                                        value={cctvMaxDisplayCount}
+                                        onChange={(event) => {
+                                          const nextValue = Number(event.target.value);
+                                          setCctvMaxDisplayCount(nextValue);
+                                          setCctvCustomInput(String(nextValue));
+                                        }}
+                                        className="min-w-[84px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                      >
+                                        {CCTV_MAX_DISPLAY_OPTIONS.map((count) => (
+                                          <option key={count} value={count}>
+                                            {count.toLocaleString()}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                    <label className="mt-1.5 flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                      <span className="text-[9px] tracking-wider text-cyan-200 font-mono">
+                                        Custom
+                                      </span>
+                                      <input
+                                        type="number"
+                                        min={CCTV_MIN_DISPLAY}
+                                        max={CCTV_MAX_DISPLAY}
+                                        step={100}
+                                        value={cctvCustomInput}
+                                        onChange={(event) => setCctvCustomInput(event.target.value)}
+                                        onBlur={commitCctvCustomInput}
+                                        onKeyDown={(event) => {
+                                          if (event.key === 'Enter') {
+                                            event.preventDefault();
+                                            commitCctvCustomInput();
+                                          }
+                                        }}
+                                        className="w-[92px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                      />
+                                    </label>
+                                    <p className="px-1 pt-1 text-[8px] tracking-wider text-cyan-300/80 font-mono">
+                                      Range: {CCTV_MIN_DISPLAY.toLocaleString()} - {CCTV_MAX_DISPLAY.toLocaleString()}
+                                    </p>
+                                  </div>
+                                )}
+                              </LayerItem>
                             ))}
                           </div>
                         </motion.div>
@@ -191,40 +268,44 @@ function LayerItem({
   layer,
   label,
   onToggle,
+  children,
 }: {
   layer: LayerConfig;
   label?: string;
   onToggle: () => void;
+  children?: React.ReactNode;
 }) {
   return (
-    <button
-      onClick={onToggle}
-      className={`w-full flex items-center justify-between p-2 rounded-lg transition-all duration-200 ${
+    <div
+      className={`w-full rounded-lg transition-all duration-200 ${
         layer.visible
           ? 'bg-cyan-800/25 border border-cyan-400/45'
           : 'hover:bg-cyan-700/10 border border-transparent'
       }`}
     >
-      <span
-        className={`text-[10px] tracking-wider font-mono ${
-          layer.visible ? 'text-cyan-100' : 'text-cyan-300'
-        }`}
-      >
-        {label ?? layer.name}
-      </span>
-      <div
-        className={`w-7 h-3.5 rounded-full p-0.5 transition-colors ${
-          layer.visible ? 'bg-cyan-400' : 'bg-slate-700'
-        }`}
-      >
-        <div
-          className={`w-2.5 h-2.5 rounded-full transition-transform ${
-            layer.visible
-              ? 'translate-x-3 bg-cyan-50 shadow-[0_0_8px_rgba(217,249,255,0.9)]'
-              : 'translate-x-0 bg-slate-400'
+      <button onClick={onToggle} className="w-full flex items-center justify-between p-2">
+        <span
+          className={`text-[10px] tracking-wider font-mono ${
+            layer.visible ? 'text-cyan-100' : 'text-cyan-300'
           }`}
-        />
-      </div>
-    </button>
+        >
+          {label ?? layer.name}
+        </span>
+        <div
+          className={`w-7 h-3.5 rounded-full p-0.5 transition-colors ${
+            layer.visible ? 'bg-cyan-400' : 'bg-slate-700'
+          }`}
+        >
+          <div
+            className={`w-2.5 h-2.5 rounded-full transition-transform ${
+              layer.visible
+                ? 'translate-x-3 bg-cyan-50 shadow-[0_0_8px_rgba(217,249,255,0.9)]'
+                : 'translate-x-0 bg-slate-400'
+            }`}
+          />
+        </div>
+      </button>
+      {children}
+    </div>
   );
 }

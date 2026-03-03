@@ -23,6 +23,7 @@ import { useVulnerableLayer } from '@/hooks/useVulnerableLayer';
 import { useDispatchLayer } from '@/hooks/useDispatchLayer';
 import { useSelectedObjectBinding } from '@/hooks/useSelectedObjectBinding';
 import { useNoFlyZonesLayer } from '@/hooks/useNoFlyZonesLayer';
+import { useCctvLayer } from '@/hooks/useCctvLayer';
 import LayerPanel from '@/components/panels/LayerPanel';
 import StatusPanel from '@/components/panels/StatusPanel';
 import AlertEngine from '@/components/alert/AlertEngine';
@@ -81,6 +82,7 @@ export default function Page() {
   useDispatchLayer();
   useSelectedObjectBinding();
   useNoFlyZonesLayer();
+  useCctvLayer();
 
   // 실시간 시계
   useEffect(() => {
