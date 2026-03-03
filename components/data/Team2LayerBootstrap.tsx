@@ -89,7 +89,7 @@ export default function Team2LayerBootstrap() {
 
         addLayer({
           ...layer,
-          visible: prevLayer?.visible ?? false,
+          visible: prevLayer?.visible ?? layer.visible,
           onClick: (feature) => {
             selectObject(
               toSelectedObjectFromFeature(feature, {
