@@ -165,6 +165,8 @@ export default function LayerPanel() {
                                 label={
                                   layer.id === 'highway-incidents' && layerDataSource[layer.id] === 'upstream'
                                     ? '서울 실시간 돌발정보 (완료)'
+                                    : layer.id === 'no-fly-zones' && layerDataSource[layer.id] === 'upstream'
+                                      ? '비행금지구역 (완료)'
                                     : undefined
                                 }
                                 onToggle={() => toggleLayer(layer.id)}
