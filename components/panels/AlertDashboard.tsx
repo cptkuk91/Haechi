@@ -113,7 +113,7 @@ export default function AlertDashboard() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="absolute left-4 top-[calc(50%+35vh+0.75rem)] z-[70] flex items-center gap-2 rounded-xl border border-cyan-900/40 bg-[#0a0f14]/85 px-3 py-2.5 text-cyan-500 backdrop-blur-md transition-colors hover:border-cyan-700/50 hover:text-cyan-300 pointer-events-auto"
+        className="absolute left-4 bottom-4 z-[70] flex items-center gap-2 rounded-xl border border-cyan-900/40 bg-[#0a0f14]/85 px-3 py-2.5 text-cyan-500 backdrop-blur-md transition-colors hover:border-cyan-700/50 hover:text-cyan-300 pointer-events-auto"
       >
         <Activity className="h-4 w-4" />
         <span className="text-[10px] tracking-[0.2em] uppercase">Alerts</span>

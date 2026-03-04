@@ -72,7 +72,7 @@ export default function LayerPanel() {
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-40 p-3 bg-[#081825]/95 backdrop-blur-md border border-cyan-500/35 rounded-xl hover:border-cyan-300/70 transition-colors group"
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-40 p-3 bg-[#0f2847] border border-cyan-400/50 rounded-xl hover:border-cyan-300/70 transition-colors group"
       >
         <Layers className="w-5 h-5 text-cyan-300 group-hover:text-cyan-100 transition-colors" />
         {activeLayerCount > 0 && (
@@ -86,16 +86,16 @@ export default function LayerPanel() {
 
   return (
     <div className="absolute left-4 top-1/2 -translate-y-1/2 z-40 w-72 pointer-events-auto">
-      <div className="bg-[#081825]/95 backdrop-blur-md border border-cyan-500/35 rounded-2xl shadow-2xl shadow-cyan-950/30 max-h-[70vh] flex flex-col">
+      <div className="bg-[#0f2847] border border-cyan-400/50 rounded-2xl shadow-2xl shadow-black/40 max-h-[70vh] flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 pb-3 border-b border-cyan-500/25 shrink-0">
+        <div className="flex items-center justify-between p-4 pb-3 border-b border-cyan-400/35 shrink-0">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-cyan-200" />
-            <span className="text-[10px] tracking-[0.3em] uppercase text-cyan-200 font-mono">
+            <Layers className="w-4 h-4 text-cyan-100" />
+            <span className="text-[11px] tracking-[0.3em] uppercase text-cyan-50 font-semibold font-mono">
               Data Layers
             </span>
             {activeLayerCount > 0 && (
-              <span className="px-1.5 py-0.5 bg-cyan-700/30 rounded text-[9px] text-cyan-100 font-mono">
+              <span className="px-1.5 py-0.5 bg-cyan-600/35 rounded text-[10px] text-white font-mono">
                 {activeLayerCount}
               </span>
             )}
@@ -104,20 +104,20 @@ export default function LayerPanel() {
             onClick={() => setCollapsed(true)}
             className="p-1 hover:bg-cyan-600/20 rounded transition-colors"
           >
-            <X className="w-3.5 h-3.5 text-cyan-400 hover:text-cyan-100" />
+            <X className="w-3.5 h-3.5 text-cyan-300 hover:text-white" />
           </button>
         </div>
 
         {/* 검색 */}
         <div className="px-4 py-2 shrink-0">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-300" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search layers..."
-              className="w-full bg-cyan-900/20 border border-cyan-500/30 rounded-lg pl-8 pr-3 py-2 text-[11px] text-cyan-100 placeholder-cyan-400 focus:outline-none focus:border-cyan-300/60 font-mono"
+              className="w-full bg-cyan-800/20 border border-cyan-400/35 rounded-lg pl-8 pr-3 py-2 text-[11px] text-white placeholder-cyan-300/70 focus:outline-none focus:border-cyan-300/60 font-mono"
             />
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function LayerPanel() {
         {/* 레이어 목록 */}
         <div className="overflow-y-auto px-3 pb-3 flex-1 no-scrollbar">
           {filteredDomains.length === 0 ? (
-            <div className="text-center py-8 text-cyan-300 text-[11px] font-mono">
+            <div className="text-center py-8 text-cyan-200 text-[11px] font-mono">
               {searchQuery ? 'No layers found' : 'No layers registered'}
             </div>
           ) : (
@@ -141,14 +141,14 @@ export default function LayerPanel() {
                     {/* 도메인 헤더 */}
                     <button
                       onClick={() => toggleDomain(domain.id)}
-                      className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-cyan-700/15 transition-colors group"
+                      className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-cyan-600/15 transition-colors group"
                     >
                       <div className="flex items-center gap-2.5">
                         {(() => {
                           const Icon = DOMAIN_ICONS[domain.id];
-                          return <Icon className="w-3.5 h-3.5" style={{ color: domain.color }} />;
+                          return <Icon className="w-4 h-4" style={{ color: domain.color }} />;
                         })()}
-                        <span className="text-[11px] text-cyan-100 tracking-wider font-mono">
+                        <span className="text-[12px] text-white/90 tracking-wider font-medium font-mono">
                           {domain.nameKo}
                         </span>
                       </div>
@@ -156,21 +156,21 @@ export default function LayerPanel() {
                         {isUpstream && (
                           <span
                             title="Live upstream data connected"
-                            className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-900/20 px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-[0.18em] text-emerald-300"
+                            className="inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-900/25 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-[0.18em] text-emerald-200"
                           >
                             <CheckCircle2 className="h-2.5 w-2.5" />
                             OK
                           </span>
                         )}
                         {activeDomainLayers > 0 && (
-                          <span className="px-1.5 py-0.5 bg-cyan-700/25 rounded text-[8px] text-cyan-100 font-mono">
+                          <span className="px-1.5 py-0.5 bg-cyan-600/30 rounded text-[9px] text-white font-mono">
                             {activeDomainLayers}/{domain.layers.length}
                           </span>
                         )}
                         {isExpanded ? (
-                          <ChevronDown className="w-3.5 h-3.5 text-cyan-300" />
+                          <ChevronDown className="w-3.5 h-3.5 text-cyan-200" />
                         ) : (
-                          <ChevronRight className="w-3.5 h-3.5 text-cyan-300" />
+                          <ChevronRight className="w-3.5 h-3.5 text-cyan-200" />
                         )}
                       </div>
                     </button>
@@ -210,7 +210,7 @@ export default function LayerPanel() {
                                 {layer.id === 'traffic-cctv-markers' && layer.visible && (
                                   <div className="px-2 pb-2">
                                     <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
-                                      <span className="text-[9px] tracking-wider text-cyan-200 font-mono">
+                                      <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
                                         Max Markers
                                       </span>
                                       <select
@@ -230,7 +230,7 @@ export default function LayerPanel() {
                                       </select>
                                     </label>
                                     <label className="mt-1.5 flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
-                                      <span className="text-[9px] tracking-wider text-cyan-200 font-mono">
+                                      <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
                                         Custom
                                       </span>
                                       <input
@@ -250,7 +250,7 @@ export default function LayerPanel() {
                                         className="w-[92px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
                                       />
                                     </label>
-                                    <p className="px-1 pt-1 text-[8px] tracking-wider text-cyan-300/80 font-mono">
+                                    <p className="px-1 pt-1 text-[9px] tracking-wider text-cyan-200/80 font-mono">
                                       Range: {CCTV_MIN_DISPLAY.toLocaleString()} - {CCTV_MAX_DISPLAY.toLocaleString()}
                                     </p>
                                   </div>
@@ -287,14 +287,14 @@ function LayerItem({
     <div
       className={`w-full rounded-lg transition-all duration-200 ${
         layer.visible
-          ? 'bg-cyan-800/25 border border-cyan-400/45'
+          ? 'bg-cyan-700/20 border border-cyan-400/50'
           : 'hover:bg-cyan-700/10 border border-transparent'
       }`}
     >
       <button onClick={onToggle} className="w-full flex items-center justify-between p-2">
         <span
-          className={`text-[10px] tracking-wider font-mono ${
-            layer.visible ? 'text-cyan-100' : 'text-cyan-300'
+          className={`text-[11px] tracking-wider font-mono ${
+            layer.visible ? 'text-white' : 'text-cyan-100/80'
           }`}
         >
           {label ?? layer.name}
