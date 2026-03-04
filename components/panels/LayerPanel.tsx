@@ -16,6 +16,7 @@ export default function LayerPanel() {
   const {
     layers,
     toggleLayer,
+    domainDataSource,
     layerDataSource,
     cctvMaxDisplayCount,
     setCctvMaxDisplayCount,
@@ -132,7 +133,8 @@ export default function LayerPanel() {
               {filteredDomains.map((domain) => {
                 const isExpanded = expandedDomains.has(domain.id);
                 const activeDomainLayers = domain.layers.filter((l) => l.visible).length;
-                const isUpstream = domain.layers.some((layer) => layerDataSource[layer.id] === 'upstream');
+                const isUpstream = domainDataSource[domain.id] === 'upstream'
+                  || domain.layers.some((layer) => layerDataSource[layer.id] === 'upstream');
 
                 return (
                   <div key={domain.id}>
@@ -191,10 +193,16 @@ export default function LayerPanel() {
                                 label={
                                   layer.id === 'highway-incidents' && layerDataSource[layer.id] === 'upstream'
                                     ? '서울 실시간 돌발정보 (완료)'
+                                    : layer.id === 'disaster-wildfire-points' && layerDataSource[layer.id] === 'upstream'
+                                      ? '산불 발생 지점 (완료)'
                                     : layer.id === 'no-fly-zones' && layerDataSource[layer.id] === 'upstream'
                                       ? '비행금지구역 (완료)'
                                     : layer.id === 'cctv-markers' && layerDataSource[layer.id] === 'upstream'
                                       ? 'CCTV 위치 (완료)'
+                                    : layer.id === 'health-emergency-room-location' && layerDataSource[layer.id] === 'upstream'
+                                      ? '응급실 위치 (완료)'
+                                    : layer.id === 'vulnerable-missing-persons' && layerDataSource[layer.id] === 'upstream'
+                                      ? '실종 발생 위치 (완료)'
                                     : undefined
                                 }
                                 onToggle={() => toggleLayer(layer.id)}

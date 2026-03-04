@@ -156,6 +156,7 @@ export function useDisasterLayer() {
       const state = useAppStore.getState();
 
       const wildfire = state.layers['disaster-wildfire-points']?.data;
+      const wildfireSource = state.layerDataSource['disaster-wildfire-points'];
       const quake = state.layers['disaster-earthquake-ripple']?.data;
       const flood = state.layers['disaster-flood-risk']?.data;
 
@@ -163,7 +164,7 @@ export function useDisasterLayer() {
       let strongest = 0;
       let focus: [number, number] | undefined;
 
-      if (wildfire) {
+      if (wildfire && wildfireSource !== 'upstream') {
         const next = updateWildfire(wildfire, now);
         updateLayerData('disaster-wildfire-points', next.collection);
         hottest = next.hottest;

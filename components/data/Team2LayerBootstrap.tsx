@@ -15,6 +15,12 @@ import {
 import { usePolling } from '@/hooks/usePolling';
 import { toSelectedObjectFromFeature } from '@/lib/selected-object';
 
+const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
+  'disaster-wildfire-points',
+  'health-emergency-room-location',
+  'vulnerable-missing-persons',
+]);
+
 export default function Team2LayerBootstrap() {
   const addLayer = useAppStore((s) => s.addLayer);
   const removeLayer = useAppStore((s) => s.removeLayer);
@@ -47,15 +53,24 @@ export default function Team2LayerBootstrap() {
       if (!payload) return;
 
       const source = payload.source ?? 'mock';
+      const stateSnapshot = useAppStore.getState();
       const affectedDomains = new Set(payload.layers.map((layer) => layer.domain));
       for (const domain of affectedDomains) {
+        const keepUpstreamDomain =
+          source === 'mock'
+          && Object.values(stateSnapshot.layers).some(
+            (layer) =>
+              layer.domain === domain
+              && EXTERNALLY_MANAGED_LAYER_IDS.has(layer.id)
+              && stateSnapshot.layerDataSource[layer.id] === 'upstream'
+          );
+        if (keepUpstreamDomain) continue;
         setDomainDataSource(domain, source);
       }
 
       const incomingLayerIds = new Set(payload.layers.map((layer) => layer.id));
-      const state = useAppStore.getState();
-      for (const [layerId, layer] of Object.entries(state.layers)) {
-        const isManagedLayer = Boolean(state.layerDataSource[layerId]);
+      for (const [layerId, layer] of Object.entries(stateSnapshot.layers)) {
+        const isManagedLayer = Boolean(stateSnapshot.layerDataSource[layerId]);
         if (!isManagedLayer) continue;
         if (!affectedDomains.has(layer.domain)) continue;
         if (incomingLayerIds.has(layerId)) continue;
@@ -85,11 +100,20 @@ export default function Team2LayerBootstrap() {
 
       for (const layer of payload.layers) {
         const prevLayer = useAppStore.getState().layers[layer.id];
-        setLayerDataSource(layer.id, source);
+        const prevLayerSource = useAppStore.getState().layerDataSource[layer.id];
+        const preserveExternalUpstream =
+          source === 'mock'
+          && EXTERNALLY_MANAGED_LAYER_IDS.has(layer.id)
+          && prevLayerSource === 'upstream'
+          && Boolean(prevLayer);
+        if (!preserveExternalUpstream) {
+          setLayerDataSource(layer.id, source);
+        }
 
         addLayer({
           ...layer,
-          visible: prevLayer?.visible ?? layer.visible,
+          data: preserveExternalUpstream ? prevLayer.data : layer.data,
+          visible: prevLayer?.visible ?? false,
           onClick: (feature) => {
             selectObject(
               toSelectedObjectFromFeature(feature, {

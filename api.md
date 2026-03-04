@@ -8,8 +8,11 @@
 | 서비스 | 용도 | 상태 | 환경변수 | 비고 | 업데이트일 |
 |---|---|---|---|---|---|
 | 서울특별시_실시간 돌발 정보 (`AccInfo`) | 교통 돌발 실데이터 수집 (`traffic` 업스트림) | 사용 중 | `TEAM2_TRAFFIC_SEOUL_INCIDENT_API_KEY`, `TEAM2_TRAFFIC_UPSTREAM_URL` | URL 템플릿: `http://openapi.seoul.go.kr:8088/{KEY}/xml/AccInfo/1/200/` | 2026-03-03 |
+| 산림청_산불통계/발생현황 (`forestStusService`) | 재난/산불 발생 지점 실데이터 수집 (`disaster-wildfire-points`) | 대기 | `TEAM2_DISASTER_WILDFIRE_API_KEY`, `TEAM2_DISASTER_WILDFIRE_UPSTREAM_URL` | `/api/disaster/wildfire-locations` (최근 1년, `dong_coordinates` 주소 매칭) | 2026-03-03 |
 | 국토교통부_비행금지구역 (`LT_C_AISPRHC`) | 항공/공역 관제 비행금지구역 실데이터 수집 (`no-fly-zones`) | 사용 중 | `TEAM2_DIGITAL_TWIN_API_KEY`, `TEAM2_DIGITAL_TWIN_API_DOMAIN` | VWorld Data API 2.0 `GetFeature` (`/api/aviation/no-fly`) | 2026-03-03 |
 | 국토교통부_교통CCTV (`LT_P_UTISCCTV`) | 영상 보안 관제 CCTV 위치 실데이터 수집 (`cctv-markers`) | 사용 중 | `TEAM2_DIGITAL_TWIN_API_KEY`, `TEAM2_DIGITAL_TWIN_API_DOMAIN` | VWorld Data API 2.0 `GetFeature` (`/api/cctv/positions`) | 2026-03-03 |
+| 국립중앙의료원_전국 응급의료기관 정보 | 보건/의료 응급실 위치 실데이터 수집 (`health-emergency-room-location`) | 대기 | `TEAM2_HEALTH_API_KEY`, `TEAM2_HEALTH_EMERGENCY_ROOMS_UPSTREAM_URL` | 현재 기본 경로 호출 시 `404 API not found` 확인. 유효 endpoint 재확인 필요 | 2026-03-03 |
+| 생활안전지도_응급의료시설 (`IF_0047_WMS`) | 보건/의료 응급의료시설 레이어 연동 후보 | 대기 | `TEAM2_SAFEMAP_API_KEY` | `openapi2/lgdInfo`는 정상(`00`)이나 `IF_0047_WMS`는 `resultCode=30`(SERVICE_KEY_IS_NOT_REGISTERED_ERROR). 키 권한/승인 반영 확인 필요 | 2026-03-03 |
 | 경찰청_교통 CCTV 영상 정보 (UTIC) | CCTV 클릭 시 영상 스트림 표시 (`cctv-stream` 예정) | 대기 | `TEAM2_UTIC_CCTV_API_KEY`, `TEAM2_UTIC_CCTV_BASE_URL` | UTIC 개방데이터 신청/승인 후 키 발급 필요 (출처 표기 의무) | 2026-03-03 |
 | OpenSky 실시간 항공기 (`states/all`) | 항공기 라이브 트랙 연동 준비 | 대기 | `TEAM2_AVIATION_OPENSKY_CLIENT_ID`, `TEAM2_AVIATION_OPENSKY_CLIENT_SECRET` | OpenSky 가입/클라이언트 발급 서버 정상화 후 진행 (`/api/aviation/aircraft` 예정) | 2026-03-03 |
 

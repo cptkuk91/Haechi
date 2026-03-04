@@ -57,6 +57,16 @@ export function useCctvLayer() {
   const seenWarnings = useRef<Set<string>>(new Set());
   const bboxParam = toBboxParam(mapBounds);
 
+  // 토글 OFF 상태에서도 실데이터 연동 상태(완료) 표기를 위해 최소 1건 소스 확인
+  const sourceProbeQuery = useQuery({
+    queryKey: ['cctv', 'positions', 'source-probe'],
+    queryFn: () => fetchCctvData(1, null),
+    staleTime: 30 * 60_000,
+    retry: 1,
+    placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
+  });
+
   const query = useQuery({
     queryKey: ['cctv', 'positions', cctvMaxDisplayCount, bboxParam],
     queryFn: () => fetchCctvData(cctvMaxDisplayCount, bboxParam),
@@ -69,6 +79,24 @@ export function useCctvLayer() {
 
   // CCTV 위치 데이터는 변동 빈도가 낮아 10분 폴링으로 충분
   usePolling(['cctv', 'positions', cctvMaxDisplayCount, bboxParam], 10 * 60_000, cctvVisible);
+
+  useEffect(() => {
+    const payload = sourceProbeQuery.data;
+    if (!payload) return;
+
+    const source = payload.source ?? 'mock';
+    setLayerDataSource('cctv-markers', source);
+    setDomainDataSource('cctv', source);
+
+    if (payload.warnings?.length) {
+      for (const warning of payload.warnings) {
+        const key = `cctv:positions:${warning}`;
+        if (seenWarnings.current.has(key)) continue;
+        seenWarnings.current.add(key);
+        console.warn(`[CCTV:positions] ${warning}`);
+      }
+    }
+  }, [setDomainDataSource, setLayerDataSource, sourceProbeQuery.data]);
 
   useEffect(() => {
     const payload = query.data;

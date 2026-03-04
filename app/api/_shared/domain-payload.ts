@@ -334,9 +334,9 @@ export function buildDomainPayload(domain: Team2DomainRoute): DomainPayload {
           {
             id: 'disaster-wildfire-points',
             domain: 'disaster',
-            name: '산불 확산 지점',
+            name: '산불 발생 지점',
             type: 'marker',
-            visible: true,
+            visible: false,
             style: { color: '#ef4444', radius: 820 },
             data: featureCollection([
               point('fire-gangwon', [128.612, 37.751], { tempC: 412, spread: 'rapid' }),
@@ -510,6 +510,15 @@ export function buildDomainPayload(domain: Team2DomainRoute): DomainPayload {
         updatedAt,
         layers: [
           {
+            id: 'health-emergency-room-location',
+            domain: 'health',
+            name: '응급실 위치',
+            type: 'marker',
+            visible: false,
+            style: { color: '#34d399', radius: 640, opacity: 0.9 },
+            data: featureCollection([]),
+          },
+          {
             id: 'health-ambulance-track',
             domain: 'health',
             name: '구급차 위치',
@@ -647,6 +656,15 @@ export function buildDomainPayload(domain: Team2DomainRoute): DomainPayload {
                 { from: 'iot-seoul-01', to: 'er-seoul' }
               ),
             ]),
+          },
+          {
+            id: 'vulnerable-missing-persons',
+            domain: 'vulnerable',
+            name: '실종 발생 위치',
+            type: 'heatmap',
+            visible: false,
+            style: { radius: 36 },
+            data: featureCollection([]),
           },
         ],
         alerts: [

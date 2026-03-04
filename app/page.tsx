@@ -24,6 +24,9 @@ import { useDispatchLayer } from '@/hooks/useDispatchLayer';
 import { useSelectedObjectBinding } from '@/hooks/useSelectedObjectBinding';
 import { useNoFlyZonesLayer } from '@/hooks/useNoFlyZonesLayer';
 import { useCctvLayer } from '@/hooks/useCctvLayer';
+import { useHealthEmergencyRoomsLayer } from '@/hooks/useHealthEmergencyRoomsLayer';
+import { useMissingPersonsLayer } from '@/hooks/useMissingPersonsLayer';
+import { useWildfireLayer } from '@/hooks/useWildfireLayer';
 import LayerPanel from '@/components/panels/LayerPanel';
 import StatusPanel from '@/components/panels/StatusPanel';
 import AlertEngine from '@/components/alert/AlertEngine';
@@ -83,6 +86,9 @@ export default function Page() {
   useSelectedObjectBinding();
   useNoFlyZonesLayer();
   useCctvLayer();
+  useWildfireLayer();
+  useHealthEmergencyRoomsLayer();
+  useMissingPersonsLayer();
 
   // 실시간 시계
   useEffect(() => {
