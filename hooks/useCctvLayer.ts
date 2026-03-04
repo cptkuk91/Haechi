@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useAppStore } from '@/stores/app-store';
 import { usePolling } from '@/hooks/usePolling';
 
+const TRAFFIC_CCTV_LAYER_ID = 'traffic-cctv-markers';
+
 interface CctvAPIResponse {
   source?: 'mock' | 'upstream';
   updatedAt?: string;
@@ -53,7 +55,7 @@ export function useCctvLayer() {
   const setDomainDataSource = useAppStore((s) => s.setDomainDataSource);
   const cctvMaxDisplayCount = useAppStore((s) => s.cctvMaxDisplayCount);
   const mapBounds = useAppStore((s) => s.mapBounds);
-  const cctvVisible = useAppStore((s) => s.layers['cctv-markers']?.visible ?? false);
+  const trafficCctvVisible = useAppStore((s) => s.layers[TRAFFIC_CCTV_LAYER_ID]?.visible ?? false);
   const seenWarnings = useRef<Set<string>>(new Set());
   const bboxParam = toBboxParam(mapBounds);
 
@@ -74,18 +76,18 @@ export function useCctvLayer() {
     retry: 2,
     placeholderData: (previousData) => previousData,
     refetchOnWindowFocus: false,
-    enabled: cctvVisible,
+    enabled: trafficCctvVisible,
   });
 
   // CCTV 위치 데이터는 변동 빈도가 낮아 10분 폴링으로 충분
-  usePolling(['cctv', 'positions', cctvMaxDisplayCount, bboxParam], 10 * 60_000, cctvVisible);
+  usePolling(['cctv', 'positions', cctvMaxDisplayCount, bboxParam], 10 * 60_000, trafficCctvVisible);
 
   useEffect(() => {
     const payload = sourceProbeQuery.data;
     if (!payload) return;
 
     const source = payload.source ?? 'mock';
-    setLayerDataSource('cctv-markers', source);
+    setLayerDataSource(TRAFFIC_CCTV_LAYER_ID, source);
     setDomainDataSource('cctv', source);
 
     if (payload.warnings?.length) {
@@ -103,7 +105,7 @@ export function useCctvLayer() {
     if (!payload) return;
 
     const source = payload.source ?? 'mock';
-    setLayerDataSource('cctv-markers', source);
+    setLayerDataSource(TRAFFIC_CCTV_LAYER_ID, source);
     setDomainDataSource('cctv', source);
 
     if (payload.warnings?.length) {
@@ -119,6 +121,6 @@ export function useCctvLayer() {
     if (!isFeatureCollection(payload.data)) return;
     if (payload.data.features.length === 0) return;
 
-    updateLayerData('cctv-markers', limitFeatureCount(payload.data, cctvMaxDisplayCount));
+    updateLayerData(TRAFFIC_CCTV_LAYER_ID, limitFeatureCount(payload.data, cctvMaxDisplayCount));
   }, [cctvMaxDisplayCount, query.data, setDomainDataSource, setLayerDataSource, updateLayerData]);
 }

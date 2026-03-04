@@ -197,8 +197,8 @@ export default function LayerPanel() {
                                       ? '산불 발생 지점 (완료)'
                                     : layer.id === 'no-fly-zones' && layerDataSource[layer.id] === 'upstream'
                                       ? '비행금지구역 (완료)'
-                                    : layer.id === 'cctv-markers' && layerDataSource[layer.id] === 'upstream'
-                                      ? 'CCTV 위치 (완료)'
+                                    : layer.id === 'traffic-cctv-markers' && layerDataSource[layer.id] === 'upstream'
+                                      ? '교통관제 CCTV (완료)'
                                     : layer.id === 'health-emergency-room-location' && layerDataSource[layer.id] === 'upstream'
                                       ? '응급실 위치 (완료)'
                                     : layer.id === 'vulnerable-missing-persons' && layerDataSource[layer.id] === 'upstream'
@@ -207,7 +207,7 @@ export default function LayerPanel() {
                                 }
                                 onToggle={() => toggleLayer(layer.id)}
                               >
-                                {layer.id === 'cctv-markers' && layer.visible && (
+                                {layer.id === 'traffic-cctv-markers' && layer.visible && (
                                   <div className="px-2 pb-2">
                                     <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
                                       <span className="text-[9px] tracking-wider text-cyan-200 font-mono">

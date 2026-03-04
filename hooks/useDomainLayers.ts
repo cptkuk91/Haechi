@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import type { LayerConfig } from '@/types/domain';
+import { toSelectedObjectFromFeature } from '@/lib/selected-object';
 
 // Data imports
 import { getCCTVGeoJSON } from '@/data/cctv';
@@ -10,12 +11,20 @@ import { getNoFlyZonesGeoJSON, getMDLGeoJSON, getKADIZGeoJSON, getUXOZonesGeoJSO
 import { getPortsGeoJSON, getDangerZonesGeoJSON, getVTSGeoJSON, getVTSCoverageGeoJSON } from '@/data/maritime';
 import { getKTXRoutesGeoJSON, getSubwayRoutesGeoJSON, getStationsGeoJSON } from '@/data/transit';
 
+function emptyFeatureCollection(): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: [],
+  };
+}
+
 /**
  * Phase 2 도메인 레이어 등록 훅
  * 마운트 시 모든 정적 데이터 레이어를 store에 등록한다.
  */
 export function useDomainLayers() {
   const addLayer = useAppStore((s) => s.addLayer);
+  const selectObject = useAppStore((s) => s.selectObject);
 
   useEffect(() => {
     const layers: LayerConfig[] = [
@@ -28,6 +37,31 @@ export function useDomainLayers() {
         visible: false,
         data: getCCTVGeoJSON(),
         style: { color: '#00ff88', radius: 400, opacity: 0.9 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'cctv-markers',
+              domain: 'cctv',
+              type: 'marker',
+            })
+          ),
+      },
+      {
+        id: 'traffic-cctv-markers',
+        domain: 'cctv',
+        name: '교통관제 CCTV',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#00ff88', radius: 380, opacity: 0.95 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'traffic-cctv-markers',
+              domain: 'cctv',
+              type: 'marker',
+            })
+          ),
       },
 
       // ── 항공/국방 (도메인 2.1, 2.4) ──
@@ -137,5 +171,5 @@ export function useDomainLayers() {
     ];
 
     layers.forEach((layer) => addLayer(layer));
-  }, [addLayer]);
+  }, [addLayer, selectObject]);
 }

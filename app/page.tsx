@@ -34,6 +34,7 @@ import AlertDashboard from '@/components/panels/AlertDashboard';
 import WarningOverlay from '@/components/alert/WarningOverlay';
 import DataPipelineStatus from '@/components/alert/DataPipelineStatus';
 import Team2LayerBootstrap from '@/components/data/Team2LayerBootstrap';
+import TrafficCctvVideoPanel from '@/components/map/TrafficCctvVideoPanel';
 
 // Mapbox GL은 SSR 불가 → dynamic import
 const MapCanvas = dynamic(() => import('@/components/map/MapCanvas'), {
@@ -197,6 +198,9 @@ export default function Page() {
 
           {/* 3D 지도 (최하단 레이어) */}
           <MapCanvas />
+
+          {/* CCTV 클릭 시 좌측 상단 PIP 영상 패널 */}
+          <TrafficCctvVideoPanel />
 
           {/* 2팀: critical 경보 오버레이 */}
           <WarningOverlay />
