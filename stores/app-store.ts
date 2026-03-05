@@ -30,6 +30,7 @@ interface AppStore {
   layerDataSource: Record<string, 'mock' | 'upstream'>;
   cctvMaxDisplayCount: number;
   mapBounds: MapBounds | null;
+  pipelineErrors: Set<string>;
 
   // === 1팀 액션 ===
   addLayer: (layer: LayerConfig) => void;
@@ -56,6 +57,7 @@ interface AppStore {
   setLayerDataSource: (layerId: string, source: 'mock' | 'upstream') => void;
   setCctvMaxDisplayCount: (count: number) => void;
   setMapBounds: (bounds: MapBounds | null) => void;
+  setPipelineErrors: (errors: Set<string>) => void;
 
   // === 공유 액션 ===
   resetCamera: () => void;
@@ -98,6 +100,7 @@ export const useAppStore = create<AppStore>((set) => ({
   layerDataSource: {},
   cctvMaxDisplayCount: DEFAULT_CCTV_MAX_DISPLAY_COUNT,
   mapBounds: null,
+  pipelineErrors: new Set<string>(),
 
   // --- 1팀 액션 ---
   addLayer: (layer) =>
@@ -291,6 +294,12 @@ export const useAppStore = create<AppStore>((set) => ({
         return s;
       }
       return { mapBounds: bounds };
+    }),
+
+  setPipelineErrors: (errors) =>
+    set((s) => {
+      if (s.pipelineErrors.size === errors.size && [...errors].every((e) => s.pipelineErrors.has(e))) return s;
+      return { pipelineErrors: errors };
     }),
 
   // --- 공유 ---

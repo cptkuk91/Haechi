@@ -4,6 +4,8 @@ import type {
   LayerPayload,
   Team2DomainRoute,
 } from '@/app/api/_shared/domain-payload';
+import { toNumber } from '@/app/api/_shared/parse-primitives';
+import { extractXmlTagValue as extractXmlTagValueFromXml } from '@/app/api/_shared/xml-utils';
 import type { AlertSeverity, DomainType, LayerType } from '@/types/domain';
 
 const TM_A = 6378137;
@@ -41,15 +43,6 @@ export interface TrafficResultStatus {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
-}
-
-function toNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
 }
 
 function inferCoordinates(value: unknown): [number, number] | null {
@@ -223,21 +216,11 @@ function normalizeMetrics(value: unknown): DomainPayload['metrics'] {
   return metrics;
 }
 
-function decodeXmlEntities(value: string): string {
-  return value
-    .replace(/&#(\d+);/g, (_m, num) => String.fromCharCode(Number(num)))
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&');
-}
-
 function extractXmlTagValue(source: string, tag: string): string | null {
-  const re = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'i');
-  const match = source.match(re);
-  if (!match?.[1]) return null;
-  return decodeXmlEntities(match[1]).replace(/\s+/g, ' ').trim();
+  return extractXmlTagValueFromXml(source, tag, {
+    decodeEntities: true,
+    compactWhitespace: true,
+  });
 }
 
 export function getTrafficResultStatus(raw: unknown): TrafficResultStatus | null {

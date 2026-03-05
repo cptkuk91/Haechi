@@ -1,4 +1,17 @@
 import { NextResponse } from 'next/server';
+import { emptyFeatureCollection } from '@/app/api/_shared/geojson-utils';
+import {
+  clampInt,
+  compactText,
+  extractResultWarningFromCommonJson,
+  extractRowsFromCommonJson,
+  extractTotalCountFromCommonJson,
+  pickNumber,
+  pickString,
+  toPositiveInt,
+  type JsonRecord,
+} from '@/app/api/_shared/parse-primitives';
+import { extractXmlItems, extractXmlTagValue } from '@/app/api/_shared/xml-utils';
 
 const DEFAULT_UPSTREAM_URL = 'https://apis.data.go.kr/B552657/ErmctInsttInfoInqireService/getEgytListInfoInqire';
 const DEFAULT_PAGE_SIZE = 1000;
@@ -8,140 +21,14 @@ const DEFAULT_MAX_PAGES = 20;
 const MIN_MAX_PAGES = 1;
 const MAX_MAX_PAGES = 50;
 
-type JsonRecord = Record<string, unknown>;
-
 interface PageFetchResult {
   rows: JsonRecord[];
   totalCount: number | null;
   warning?: string;
 }
 
-function emptyFeatureCollection(): GeoJSON.FeatureCollection {
-  return {
-    type: 'FeatureCollection',
-    features: [],
-  };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function toPositiveInt(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.floor(value);
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
-  }
-  return fallback;
-}
-
-function clampInt(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, Math.floor(value)));
-}
-
-function compactText(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
-function toArray(value: unknown): JsonRecord[] {
-  if (Array.isArray(value)) {
-    return value.filter((row): row is JsonRecord => isRecord(row));
-  }
-  if (isRecord(value)) {
-    return [value];
-  }
-  return [];
-}
-
-function toNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-}
-
-function pickNumber(row: JsonRecord, keys: string[]): number | null {
-  for (const key of keys) {
-    const value = toNumber(row[key]);
-    if (value !== null) return value;
-  }
-  return null;
-}
-
-function pickString(row: JsonRecord, keys: string[]): string | null {
-  for (const key of keys) {
-    const value = row[key];
-    if (typeof value === 'string') {
-      const normalized = compactText(value);
-      if (normalized) return normalized;
-    }
-  }
-  return null;
-}
-
-function extractRowsFromJson(raw: unknown): JsonRecord[] {
-  if (Array.isArray(raw)) return toArray(raw);
-  if (!isRecord(raw)) return [];
-
-  const dataRows = toArray(raw.data);
-  if (dataRows.length > 0) return dataRows;
-
-  const response = isRecord(raw.response) ? raw.response : null;
-  const body = response && isRecord(response.body) ? response.body : null;
-  const items = body?.items;
-  if (isRecord(items)) {
-    const itemRows = toArray(items.item);
-    if (itemRows.length > 0) return itemRows;
-  }
-
-  const bodyRows = toArray(body?.items);
-  if (bodyRows.length > 0) return bodyRows;
-
-  const itemRows = toArray(raw.item);
-  if (itemRows.length > 0) return itemRows;
-
-  return [];
-}
-
-function extractTotalCountFromJson(raw: unknown): number | null {
-  if (!isRecord(raw)) return null;
-  const response = isRecord(raw.response) ? raw.response : null;
-  const body = response && isRecord(response.body) ? response.body : null;
-
-  const candidates: unknown[] = [
-    body?.totalCount,
-    raw.totalCount,
-    raw.count,
-    response?.count,
-  ];
-  for (const candidate of candidates) {
-    const parsed = toPositiveInt(candidate, 0);
-    if (parsed > 0) return parsed;
-  }
-  return null;
-}
-
-function extractResultWarningFromJson(raw: unknown): string | null {
-  if (!isRecord(raw)) return null;
-  const response = isRecord(raw.response) ? raw.response : null;
-  const header = response && isRecord(response.header) ? response.header : null;
-  const code = typeof header?.resultCode === 'string' ? header.resultCode : null;
-  const message = typeof header?.resultMsg === 'string' ? header.resultMsg : null;
-  if (!code) return null;
-  if (code === '00' || code === 'INFO-000' || code === 'NORMAL_SERVICE') return null;
-  return `NMC emergency API [${code}] ${message ?? 'Unknown error'}`;
-}
-
-function extractXmlTagValue(source: string, tag: string): string | null {
-  const match = source.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i'));
-  return match?.[1]?.trim() ?? null;
-}
-
 function extractRowsFromXml(xml: string): JsonRecord[] {
-  const matches = xml.match(/<item>[\s\S]*?<\/item>/gi) ?? [];
+  const matches = extractXmlItems(xml, 'item');
   const rows: JsonRecord[] = [];
   for (const itemXml of matches) {
     rows.push({
@@ -200,10 +87,10 @@ async function fetchEmergencyRoomPage(args: {
 
   try {
     const json = JSON.parse(text);
-    const warning = extractResultWarningFromJson(json) ?? undefined;
+    const warning = extractResultWarningFromCommonJson(json, 'NMC emergency API') ?? undefined;
     return {
-      rows: extractRowsFromJson(json),
-      totalCount: extractTotalCountFromJson(json),
+      rows: extractRowsFromCommonJson(json),
+      totalCount: extractTotalCountFromCommonJson(json),
       warning,
     };
   } catch {

@@ -1,5 +1,23 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { emptyFeatureCollection } from '@/app/api/_shared/geojson-utils';
+import {
+  clampInt,
+  compactText,
+  extractResultWarningFromCommonJson,
+  extractRowsFromCommonJson,
+  extractTotalCountFromCommonJson,
+  pickNumber,
+  pickString,
+  toNumber,
+  toPositiveInt,
+  type JsonRecord,
+} from '@/app/api/_shared/parse-primitives';
+import {
+  extractResultWarningFromXml as extractResultWarningFromXmlShared,
+  extractXmlItems,
+  extractXmlTagValue,
+} from '@/app/api/_shared/xml-utils';
 
 const DEFAULT_UPSTREAM_URL = 'http://apis.data.go.kr/1400000/forestStusService/getfirestatsservice';
 const DEFAULT_PAGE_SIZE = 500;
@@ -36,8 +54,6 @@ const SIGUNGU_ALIAS: Record<string, { sido: string; sigungu: string }> = {
   '경상남도 진해시': { sido: '경상남도', sigungu: '창원시 진해구' },
   '경상북도 군위군': { sido: '대구광역시', sigungu: '군위군' },
 };
-
-type JsonRecord = Record<string, unknown>;
 
 interface PageFetchResult {
   rows: JsonRecord[];
@@ -76,72 +92,6 @@ interface WildfirePeriod {
 
 let cache = new Map<string, CachedResult>();
 
-function emptyFeatureCollection(): GeoJSON.FeatureCollection {
-  return {
-    type: 'FeatureCollection',
-    features: [],
-  };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function compactText(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
-function toPositiveInt(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.floor(value);
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
-  }
-  return fallback;
-}
-
-function clampInt(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, Math.floor(value)));
-}
-
-function toArray(value: unknown): JsonRecord[] {
-  if (Array.isArray(value)) {
-    return value.filter((row): row is JsonRecord => isRecord(row));
-  }
-  if (isRecord(value)) {
-    return [value];
-  }
-  return [];
-}
-
-function toNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-}
-
-function pickString(row: JsonRecord, keys: string[]): string | null {
-  for (const key of keys) {
-    const value = row[key];
-    if (typeof value === 'string') {
-      const normalized = compactText(value);
-      if (normalized) return normalized;
-    }
-  }
-  return null;
-}
-
-function pickNumber(row: JsonRecord, keys: string[]): number | null {
-  for (const key of keys) {
-    const value = toNumber(row[key]);
-    if (value !== null) return value;
-  }
-  return null;
-}
-
 function normalizeYmd(value: string | null): string | null {
   if (!value) return null;
   const digits = value.replace(/\D/g, '');
@@ -171,99 +121,35 @@ function resolvePeriod(searchParams: URLSearchParams): WildfirePeriod {
   return { start: end, end: start };
 }
 
-function extractRowsFromJson(raw: unknown): JsonRecord[] {
-  if (Array.isArray(raw)) return toArray(raw);
-  if (!isRecord(raw)) return [];
-
-  const dataRows = toArray(raw.data);
-  if (dataRows.length > 0) return dataRows;
-
-  const response = isRecord(raw.response) ? raw.response : null;
-  const body = response && isRecord(response.body) ? response.body : null;
-
-  if (body?.items && isRecord(body.items)) {
-    const itemRows = toArray(body.items.item);
-    if (itemRows.length > 0) return itemRows;
-  }
-
-  const bodyRows = toArray(body?.items);
-  if (bodyRows.length > 0) return bodyRows;
-
-  const itemRows = toArray(raw.item);
-  if (itemRows.length > 0) return itemRows;
-
-  return [];
-}
-
-function extractTotalCountFromJson(raw: unknown): number | null {
-  if (!isRecord(raw)) return null;
-  const response = isRecord(raw.response) ? raw.response : null;
-  const body = response && isRecord(response.body) ? response.body : null;
-
-  const candidates: unknown[] = [
-    body?.totalCount,
-    raw.totalCount,
-    raw.count,
-    response?.count,
-  ];
-
-  for (const candidate of candidates) {
-    const parsed = toPositiveInt(candidate, 0);
-    if (parsed > 0) return parsed;
-  }
-
-  return null;
-}
-
-function extractResultWarningFromJson(raw: unknown): string | null {
-  if (!isRecord(raw)) return null;
-  const response = isRecord(raw.response) ? raw.response : null;
-  const header = response && isRecord(response.header) ? response.header : null;
-  const code = typeof header?.resultCode === 'string' ? header.resultCode : null;
-  const message = typeof header?.resultMsg === 'string' ? header.resultMsg : null;
-
-  if (!code || code === '00' || code === 'INFO-000' || code === 'NORMAL_SERVICE') return null;
-  return `forest wildfire API [${code}] ${message ?? 'Unknown error'}`;
-}
-
-function decodeXmlEntities(value: string): string {
-  return value
-    .replace(/&#(\d+);/g, (_m, num) => String.fromCharCode(Number(num)))
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&');
-}
-
-function extractXmlTagValue(source: string, tag: string): string | null {
-  const match = source.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i'));
-  if (!match?.[1]) return null;
-  return compactText(decodeXmlEntities(match[1]));
+function readWildfireXmlTag(source: string, tag: string): string | null {
+  return extractXmlTagValue(source, tag, {
+    decodeEntities: true,
+    compactWhitespace: true,
+  });
 }
 
 function extractRowsFromXml(xml: string): JsonRecord[] {
-  const matches = xml.match(/<item>[\s\S]*?<\/item>/gi) ?? [];
+  const matches = extractXmlItems(xml, 'item');
   const rows: JsonRecord[] = [];
 
   for (const itemXml of matches) {
     rows.push({
-      damagearea: extractXmlTagValue(itemXml, 'damagearea'),
-      endday: extractXmlTagValue(itemXml, 'endday'),
-      endmonth: extractXmlTagValue(itemXml, 'endmonth'),
-      endtime: extractXmlTagValue(itemXml, 'endtime'),
-      endyear: extractXmlTagValue(itemXml, 'endyear'),
-      firecause: extractXmlTagValue(itemXml, 'firecause'),
-      locbunji: extractXmlTagValue(itemXml, 'locbunji'),
-      locdong: extractXmlTagValue(itemXml, 'locdong'),
-      locgungu: extractXmlTagValue(itemXml, 'locgungu'),
-      locmenu: extractXmlTagValue(itemXml, 'locmenu'),
-      locsi: extractXmlTagValue(itemXml, 'locsi'),
-      startday: extractXmlTagValue(itemXml, 'startday'),
-      startdayofweek: extractXmlTagValue(itemXml, 'startdayofweek'),
-      startmonth: extractXmlTagValue(itemXml, 'startmonth'),
-      starttime: extractXmlTagValue(itemXml, 'starttime'),
-      startyear: extractXmlTagValue(itemXml, 'startyear'),
+      damagearea: readWildfireXmlTag(itemXml, 'damagearea'),
+      endday: readWildfireXmlTag(itemXml, 'endday'),
+      endmonth: readWildfireXmlTag(itemXml, 'endmonth'),
+      endtime: readWildfireXmlTag(itemXml, 'endtime'),
+      endyear: readWildfireXmlTag(itemXml, 'endyear'),
+      firecause: readWildfireXmlTag(itemXml, 'firecause'),
+      locbunji: readWildfireXmlTag(itemXml, 'locbunji'),
+      locdong: readWildfireXmlTag(itemXml, 'locdong'),
+      locgungu: readWildfireXmlTag(itemXml, 'locgungu'),
+      locmenu: readWildfireXmlTag(itemXml, 'locmenu'),
+      locsi: readWildfireXmlTag(itemXml, 'locsi'),
+      startday: readWildfireXmlTag(itemXml, 'startday'),
+      startdayofweek: readWildfireXmlTag(itemXml, 'startdayofweek'),
+      startmonth: readWildfireXmlTag(itemXml, 'startmonth'),
+      starttime: readWildfireXmlTag(itemXml, 'starttime'),
+      startyear: readWildfireXmlTag(itemXml, 'startyear'),
     });
   }
 
@@ -271,10 +157,11 @@ function extractRowsFromXml(xml: string): JsonRecord[] {
 }
 
 function extractResultWarningFromXml(xml: string): string | null {
-  const code = extractXmlTagValue(xml, 'resultCode');
-  const message = extractXmlTagValue(xml, 'resultMsg');
-  if (!code || code === '00' || code === 'INFO-000' || code === 'NORMAL_SERVICE') return null;
-  return `forest wildfire API [${code}] ${message ?? 'Unknown error'}`;
+  return extractResultWarningFromXmlShared(xml, {
+    sourceLabel: 'forest wildfire API',
+    decodeEntities: true,
+    compactWhitespace: true,
+  });
 }
 
 async function fetchWildfirePage(args: {
@@ -322,17 +209,17 @@ async function fetchWildfirePage(args: {
 
   try {
     const json = JSON.parse(text);
-    const warning = extractResultWarningFromJson(json) ?? undefined;
+    const warning = extractResultWarningFromCommonJson(json, 'forest wildfire API') ?? undefined;
     return {
-      rows: extractRowsFromJson(json),
-      totalCount: extractTotalCountFromJson(json),
+      rows: extractRowsFromCommonJson(json),
+      totalCount: extractTotalCountFromCommonJson(json),
       warning,
     };
   } catch {
     const warning = extractResultWarningFromXml(text) ?? undefined;
     return {
       rows: extractRowsFromXml(text),
-      totalCount: toPositiveInt(extractXmlTagValue(text, 'totalCount'), 0) || null,
+      totalCount: toPositiveInt(readWildfireXmlTag(text, 'totalCount'), 0) || null,
       warning,
     };
   }

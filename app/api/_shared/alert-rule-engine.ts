@@ -1,19 +1,11 @@
 import type { AlertSeverity, DomainType } from '@/types/domain';
 import type { AlertPayload, DomainPayload } from '@/app/api/_shared/domain-payload';
+import { toNumber } from '@/app/api/_shared/parse-primitives';
 
 export interface AlertRuleDiagnostics {
   generated: number;
   chained: number;
   total: number;
-}
-
-function toNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
 }
 
 function getPointCoordinates(feature: GeoJSON.Feature): [number, number] | undefined {

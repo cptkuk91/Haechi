@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
+import { emptyFeatureCollection } from '@/app/api/_shared/geojson-utils';
+import { clampInt, compactText, toPositiveInt } from '@/app/api/_shared/parse-primitives';
+import {
+  fetchVWorldFeaturePage,
+  type VWorldPageFetchResult,
+} from '@/app/api/_shared/vworld-client';
 
-const VWORLD_ENDPOINT = 'https://api.vworld.kr/req/data';
 const VWORLD_DATASET = 'LT_P_UTISCCTV';
 const DEFAULT_GEOM_FILTER = 'BOX(124,33,132,39)';
 const DEFAULT_PAGE_SIZE = 1000;
@@ -12,52 +17,6 @@ const ABSOLUTE_MAX_FEATURES = MAX_PAGES * MAX_PAGE_SIZE;
 const DEFAULT_MAX_FEATURES = 100;
 const SEOUL_PRIORITY_ATTR_FILTER = 'locate:like:서울';
 const SEOUL_COORDINATE: [number, number] = [126.978, 37.5665];
-
-interface VWorldError {
-  code?: string;
-  text?: string;
-}
-
-interface VWorldResponsePayload {
-  response?: {
-    status?: string;
-    page?: {
-      total?: string | number;
-      current?: string | number;
-      size?: string | number;
-    };
-    result?: {
-      featureCollection?: GeoJSON.FeatureCollection;
-    };
-    error?: VWorldError;
-  };
-}
-
-interface PageFetchResult {
-  features: GeoJSON.Feature[];
-  totalPages: number;
-  warning?: string;
-}
-
-function emptyFeatureCollection(): GeoJSON.FeatureCollection {
-  return {
-    type: 'FeatureCollection',
-    features: [],
-  };
-}
-
-function toPositiveInt(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.floor(value);
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
-  }
-  return fallback;
-}
-
-function clampInt(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, Math.floor(value)));
-}
 
 function parseBboxQueryParam(raw: string | null): { west: number; south: number; east: number; north: number } | null {
   if (!raw) return null;
@@ -87,30 +46,6 @@ function includesCoordinate(
   if (!bbox) return true;
   const [lng, lat] = coord;
   return lng >= bbox.west && lng <= bbox.east && lat >= bbox.south && lat <= bbox.north;
-}
-
-function isFeatureCollection(value: unknown): value is GeoJSON.FeatureCollection {
-  if (!value || typeof value !== 'object') return false;
-  const maybe = value as { type?: unknown; features?: unknown };
-  return maybe.type === 'FeatureCollection' && Array.isArray(maybe.features);
-}
-
-function isValidPointFeature(feature: GeoJSON.Feature): boolean {
-  if (!feature.geometry || feature.geometry.type !== 'Point') return false;
-  const coords = feature.geometry.coordinates;
-  return (
-    Array.isArray(coords)
-    && typeof coords[0] === 'number'
-    && typeof coords[1] === 'number'
-    && Number.isFinite(coords[0])
-    && Number.isFinite(coords[1])
-  );
-}
-
-function compactText(value: string): string {
-  return value
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 function buildFallbackFeatureId(args: {
@@ -186,79 +121,19 @@ async function fetchCctvPage(args: {
   geomFilter: string;
   pageSize: number;
   attrFilter?: string;
-}): Promise<PageFetchResult> {
-  const url = new URL(VWORLD_ENDPOINT);
-  url.searchParams.set('service', 'data');
-  url.searchParams.set('version', '2.0');
-  url.searchParams.set('request', 'GetFeature');
-  url.searchParams.set('key', args.key);
-  url.searchParams.set('format', 'json');
-  url.searchParams.set('errorFormat', 'json');
-  url.searchParams.set('size', String(args.pageSize));
-  url.searchParams.set('page', String(args.page));
-  url.searchParams.set('data', VWORLD_DATASET);
-  url.searchParams.set('geomFilter', args.geomFilter);
-  url.searchParams.set('geometry', 'true');
-  url.searchParams.set('attribute', 'true');
-  url.searchParams.set('crs', 'EPSG:4326');
-
-  if (args.domain) url.searchParams.set('domain', args.domain);
-  if (args.attrFilter) url.searchParams.set('attrFilter', args.attrFilter);
-
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
+}): Promise<VWorldPageFetchResult> {
+  return fetchVWorldFeaturePage({
+    warningLabel: 'VWorld CCTV',
+    dataset: VWORLD_DATASET,
+    key: args.key,
+    page: args.page,
+    pageSize: args.pageSize,
+    geomFilter: args.geomFilter,
+    domain: args.domain,
+    attrFilter: args.attrFilter,
+    pointOnly: true,
+    sanitizeFeature,
   });
-
-  if (!response.ok) {
-    return {
-      features: [],
-      totalPages: 1,
-      warning: `VWorld CCTV upstream responded ${response.status}`,
-    };
-  }
-
-  const raw = (await response.json()) as VWorldResponsePayload;
-  const status = raw.response?.status ?? 'ERROR';
-  if (status === 'ERROR') {
-    const error = raw.response?.error;
-    const code = error?.code ?? 'UNKNOWN_ERROR';
-    const text = error?.text ?? 'VWorld API error';
-    return {
-      features: [],
-      totalPages: 1,
-      warning: `VWorld CCTV error [${code}] ${text}`,
-    };
-  }
-
-  if (status === 'NOT_FOUND') {
-    return {
-      features: [],
-      totalPages: 1,
-    };
-  }
-
-  const featureCollection = raw.response?.result?.featureCollection;
-  if (!isFeatureCollection(featureCollection)) {
-    return {
-      features: [],
-      totalPages: 1,
-      warning: 'VWorld CCTV response missing featureCollection',
-    };
-  }
-
-  const totalPages = toPositiveInt(raw.response?.page?.total, 1);
-  const features = featureCollection.features
-    .filter((feature): feature is GeoJSON.Feature => isValidPointFeature(feature))
-    .map((feature, index) => sanitizeFeature(feature, index));
-
-  return {
-    features,
-    totalPages,
-  };
 }
 
 async function collectCctvFeatures(args: {

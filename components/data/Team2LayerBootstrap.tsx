@@ -28,6 +28,7 @@ export default function Team2LayerBootstrap() {
   const triggerAlert = useAppStore((s) => s.triggerAlert);
   const setDomainDataSource = useAppStore((s) => s.setDomainDataSource);
   const setLayerDataSource = useAppStore((s) => s.setLayerDataSource);
+  const setPipelineErrors = useAppStore((s) => s.setPipelineErrors);
 
   const seenAlertIds = useRef<Set<string>>(new Set());
   const seenWarnings = useRef<Set<string>>(new Set());
@@ -39,6 +40,23 @@ export default function Team2LayerBootstrap() {
   const crimeQuery = useCrimeData();
   const healthQuery = useHealthData();
   const vulnerableQuery = useVulnerableData();
+
+  // Pipeline error 상태를 store에 동기화
+  useEffect(() => {
+    const errors = new Set<string>();
+    if (trafficQuery.isError) errors.add('traffic');
+    if (weatherQuery.isError) errors.add('weather');
+    if (disasterQuery.isError) errors.add('disaster');
+    if (infraQuery.isError) errors.add('infra');
+    if (crimeQuery.isError) errors.add('crime');
+    if (healthQuery.isError) errors.add('health');
+    if (vulnerableQuery.isError) errors.add('vulnerable');
+    setPipelineErrors(errors);
+  }, [
+    trafficQuery.isError, weatherQuery.isError, disasterQuery.isError,
+    infraQuery.isError, crimeQuery.isError, healthQuery.isError,
+    vulnerableQuery.isError, setPipelineErrors,
+  ]);
 
   usePolling(['public-api', 'traffic'], 30_000);
   usePolling(['public-api', 'weather'], 50_000);

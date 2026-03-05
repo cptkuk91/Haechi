@@ -1,73 +1,25 @@
 import { NextResponse } from 'next/server';
+import { emptyFeatureCollection } from '@/app/api/_shared/geojson-utils';
+import { compactText, toPositiveInt } from '@/app/api/_shared/parse-primitives';
+import {
+  fetchVWorldFeaturePage,
+  type VWorldPageFetchResult,
+} from '@/app/api/_shared/vworld-client';
 
-const VWORLD_ENDPOINT = 'https://api.vworld.kr/req/data';
 const VWORLD_DATASET = 'LT_C_AISPRHC';
 const DEFAULT_GEOM_FILTER = 'BOX(124,33,132,39)';
 const DEFAULT_PAGE_SIZE = 1000;
 const MAX_PAGES = 20;
 
-interface VWorldError {
-  code?: string;
-  text?: string;
-}
-
-interface VWorldResponsePayload {
-  response?: {
-    status?: string;
-    page?: {
-      total?: string | number;
-      current?: string | number;
-      size?: string | number;
-    };
-    result?: {
-      featureCollection?: GeoJSON.FeatureCollection;
-    };
-    error?: VWorldError;
-  };
-}
-
-interface PageFetchResult {
-  features: GeoJSON.Feature[];
-  totalPages: number;
-  warning?: string;
-}
-
-function emptyFeatureCollection(): GeoJSON.FeatureCollection {
-  return {
-    type: 'FeatureCollection',
-    features: [],
-  };
-}
-
-function toPositiveInt(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
-    return Math.floor(value);
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return Math.floor(parsed);
-    }
-  }
-  return fallback;
-}
-
-function isFeatureCollection(value: unknown): value is GeoJSON.FeatureCollection {
-  if (!value || typeof value !== 'object') return false;
-  const maybe = value as { type?: unknown; features?: unknown };
-  return maybe.type === 'FeatureCollection' && Array.isArray(maybe.features);
-}
-
-function compactText(value: string): string {
-  return value
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+function compactNoFlyText(value: string): string {
+  return compactText(value.replace(/<[^>]+>/g, ' '));
 }
 
 function sanitizeFeature(feature: GeoJSON.Feature, index: number): GeoJSON.Feature {
   const properties = (feature.properties as Record<string, unknown> | null) ?? {};
-  const prohibited = typeof properties.prohibited === 'string' ? compactText(properties.prohibited) : properties.prohibited;
+  const prohibited = typeof properties.prohibited === 'string'
+    ? compactNoFlyText(properties.prohibited)
+    : properties.prohibited;
 
   return {
     ...feature,
@@ -85,77 +37,17 @@ async function fetchNoFlyPage(args: {
   domain?: string;
   geomFilter: string;
   pageSize: number;
-}): Promise<PageFetchResult> {
-  const url = new URL(VWORLD_ENDPOINT);
-  url.searchParams.set('service', 'data');
-  url.searchParams.set('version', '2.0');
-  url.searchParams.set('request', 'GetFeature');
-  url.searchParams.set('key', args.key);
-  url.searchParams.set('format', 'json');
-  url.searchParams.set('errorFormat', 'json');
-  url.searchParams.set('size', String(args.pageSize));
-  url.searchParams.set('page', String(args.page));
-  url.searchParams.set('data', VWORLD_DATASET);
-  url.searchParams.set('geomFilter', args.geomFilter);
-  url.searchParams.set('geometry', 'true');
-  url.searchParams.set('attribute', 'true');
-  url.searchParams.set('crs', 'EPSG:4326');
-
-  if (args.domain) {
-    url.searchParams.set('domain', args.domain);
-  }
-
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
+}): Promise<VWorldPageFetchResult> {
+  return fetchVWorldFeaturePage({
+    warningLabel: 'VWorld no-fly',
+    dataset: VWORLD_DATASET,
+    key: args.key,
+    page: args.page,
+    pageSize: args.pageSize,
+    geomFilter: args.geomFilter,
+    domain: args.domain,
+    sanitizeFeature,
   });
-
-  if (!response.ok) {
-    return {
-      features: [],
-      totalPages: 1,
-      warning: `VWorld no-fly upstream responded ${response.status}`,
-    };
-  }
-
-  const raw = (await response.json()) as VWorldResponsePayload;
-  const status = raw.response?.status ?? 'ERROR';
-  if (status === 'ERROR') {
-    const error = raw.response?.error;
-    const code = error?.code ?? 'UNKNOWN_ERROR';
-    const text = error?.text ?? 'VWorld API error';
-    return {
-      features: [],
-      totalPages: 1,
-      warning: `VWorld no-fly error [${code}] ${text}`,
-    };
-  }
-
-  if (status === 'NOT_FOUND') {
-    return {
-      features: [],
-      totalPages: 1,
-    };
-  }
-
-  const featureCollection = raw.response?.result?.featureCollection;
-  if (!isFeatureCollection(featureCollection)) {
-    return {
-      features: [],
-      totalPages: 1,
-      warning: 'VWorld no-fly response missing featureCollection',
-    };
-  }
-
-  const totalPages = toPositiveInt(raw.response?.page?.total, 1);
-
-  return {
-    features: featureCollection.features.map((feature, index) => sanitizeFeature(feature, index)),
-    totalPages,
-  };
 }
 
 export async function GET() {
