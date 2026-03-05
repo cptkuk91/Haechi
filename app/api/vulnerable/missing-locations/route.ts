@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { Collection, Document } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 
 const SAFE182_URL = 'https://www.safe182.go.kr/api/lcm/amberList.do';
@@ -157,11 +158,10 @@ async function fetchSourceProbe(esntlId: string, authKey: string): Promise<{ tot
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function buildCoordMaps(collection: any) {
-  const docs: DongCoordinate[] = await collection
+async function buildCoordMaps(collection: Collection<Document>) {
+  const docs = await collection
     .find({ lat: { $ne: null }, lng: { $ne: null } })
-    .project({ fullAddress: 1, sidoName: 1, sigunguName: 1, lat: 1, lng: 1 })
+    .project<DongCoordinate>({ fullAddress: 1, sidoName: 1, sigunguName: 1, lat: 1, lng: 1 })
     .toArray();
 
   const exactMap = new Map<string, { lat: number; lng: number }>();

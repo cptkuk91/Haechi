@@ -6,7 +6,10 @@ import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 export function usePolling(queryKey: QueryKey, intervalMs = 45_000, enabled = true): void {
   const queryClient = useQueryClient();
   const queryKeyRef = useRef(queryKey);
-  queryKeyRef.current = queryKey;
+
+  useEffect(() => {
+    queryKeyRef.current = queryKey;
+  });
 
   // Serialize the queryKey so the effect only re-runs when the value changes,
   // not when the array reference changes on every render.

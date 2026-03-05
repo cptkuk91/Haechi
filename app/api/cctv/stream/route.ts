@@ -8,6 +8,8 @@ const DEFAULT_BASE_URL = 'https://www.utic.go.kr/guide/cctvOpenData.do';
 const MAP_CCTV_URL = 'https://www.utic.go.kr/map/mapcctv.do';
 const STREAM_PAGE_URL = 'https://www.utic.go.kr/jsp/map/openDataCctvStream.jsp';
 const REQUEST_TIMEOUT_MS = 15_000;
+// UTIC 서버(utic.go.kr)가 불완전한 인증서 체인을 반환하여 TLS 검증 실패 → 개발 환경에서만 우회
+const TLS_REJECT_UNAUTHORIZED = process.env.NODE_ENV === 'production';
 const MAX_REDIRECTS = 3;
 const LIST_FETCH_RETRY_COUNT = 3;
 const LIST_FETCH_RETRY_DELAY_MS = 350;
@@ -163,7 +165,7 @@ async function getTextWithInsecureTls(
         method: 'GET',
         headers,
         timeout: REQUEST_TIMEOUT_MS,
-        rejectUnauthorized: false,
+        rejectUnauthorized: TLS_REJECT_UNAUTHORIZED,
       },
       (response) => {
         const status = response.statusCode ?? 0;
