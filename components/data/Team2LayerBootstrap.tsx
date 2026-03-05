@@ -19,6 +19,7 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'disaster-wildfire-points',
   'health-emergency-room-location',
   'vulnerable-missing-persons',
+  'vulnerable-elderly-welfare-facilities',
 ]);
 
 export default function Team2LayerBootstrap() {
@@ -90,6 +91,7 @@ export default function Team2LayerBootstrap() {
       for (const [layerId, layer] of Object.entries(stateSnapshot.layers)) {
         const isManagedLayer = Boolean(stateSnapshot.layerDataSource[layerId]);
         if (!isManagedLayer) continue;
+        if (EXTERNALLY_MANAGED_LAYER_IDS.has(layerId)) continue;
         if (!affectedDomains.has(layer.domain)) continue;
         if (incomingLayerIds.has(layerId)) continue;
         removeLayer(layerId);

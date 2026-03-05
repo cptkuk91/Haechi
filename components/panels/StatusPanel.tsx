@@ -14,6 +14,50 @@ function formatValue(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function pickFirstString(properties: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = properties[key];
+    if (typeof value !== 'string') continue;
+    const normalized = value.trim();
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
+function isElderlyWelfareSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'vulnerable') return false;
+  const properties = selectedObject.properties;
+  return (
+    typeof properties.facilityType === 'string'
+    || typeof properties.cat_nam === 'string'
+    || typeof properties.fac_nam === 'string'
+  );
+}
+
+function buildElderlyWelfareEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'fac_nam']);
+  const facilityType = pickFirstString(properties, ['facilityType', 'category', 'cat_nam']);
+  const phone = pickFirstString(properties, ['phone', 'fac_tel']);
+  const roadAddress = pickFirstString(properties, ['roadAddress', 'fac_n_add']);
+  const oldAddress = pickFirstString(properties, ['oldAddress', 'fac_o_add']);
+  const address = pickFirstString(properties, ['address']);
+
+  const entries: Array<[string, unknown]> = [
+    ['시설명', name ?? '-'],
+    ['시설유형', facilityType ?? '-'],
+    ['전화번호', phone ?? '-'],
+  ];
+
+  if (roadAddress || address) {
+    entries.push(['도로명주소', roadAddress ?? address ?? '-']);
+  }
+  if (oldAddress) {
+    entries.push(['지번주소', oldAddress]);
+  }
+
+  return entries;
+}
+
 export default function StatusPanel() {
   const selectedObject = useAppStore((s) => s.selectedObject);
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen);
@@ -25,6 +69,9 @@ export default function StatusPanel() {
 
   const selectedEntries = useMemo(() => {
     if (!selectedObject) return [];
+    if (isElderlyWelfareSelection(selectedObject)) {
+      return buildElderlyWelfareEntries(selectedObject.properties);
+    }
     return Object.entries(selectedObject.properties).slice(0, 8);
   }, [selectedObject]);
 

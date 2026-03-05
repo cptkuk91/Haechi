@@ -153,13 +153,21 @@ export function useDomainLayers() {
 
       // ── 사회적 약자 (신규 메뉴 placeholder) ──
       {
-        id: 'vulnerable-social-welfare-facilities',
+        id: 'vulnerable-elderly-welfare-facilities',
         domain: 'vulnerable',
-        name: '사회복지시설 정보 서비스(통합)',
+        name: '노인복지시설',
         type: 'marker',
         visible: false,
         data: emptyFeatureCollection(),
         style: { color: '#ec4899', radius: 500, opacity: 0.9 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'vulnerable-elderly-welfare-facilities',
+              domain: 'vulnerable',
+              type: 'marker',
+            })
+          ),
       },
     ];
 
