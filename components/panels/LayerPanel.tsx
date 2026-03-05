@@ -11,6 +11,11 @@ import type { LayerConfig } from '@/types/domain';
 const CCTV_MAX_DISPLAY_OPTIONS = [100, 500, 1000, 2000, 5000, 10000, 20000] as const;
 const CCTV_MIN_DISPLAY = 100;
 const CCTV_MAX_DISPLAY = 20_000;
+const HIDDEN_LAYER_IDS = new Set([
+  'vulnerable-amber-radius',
+  'vulnerable-emergency-iot',
+  'vulnerable-support-link',
+]);
 
 export default function LayerPanel() {
   const {
@@ -29,6 +34,15 @@ export default function LayerPanel() {
   useEffect(() => {
     setCctvCustomInput(String(cctvMaxDisplayCount));
   }, [cctvMaxDisplayCount]);
+
+  useEffect(() => {
+    for (const layerId of HIDDEN_LAYER_IDS) {
+      const layer = layers[layerId];
+      if (layer?.visible) {
+        toggleLayer(layerId);
+      }
+    }
+  }, [layers, toggleLayer]);
 
   const commitCctvCustomInput = () => {
     const parsed = Number(cctvCustomInput);
@@ -52,11 +66,11 @@ export default function LayerPanel() {
 
   // 도메인별 레이어 그룹핑
   const layersByDomain = DOMAIN_REGISTRY.map((domain) => {
-    const domainLayers = Object.values(layers).filter((l) => l.domain === domain.id);
+    const domainLayers = Object.values(layers).filter((l) => l.domain === domain.id && !HIDDEN_LAYER_IDS.has(l.id));
     return { ...domain, layers: domainLayers };
   }).filter((d) => d.layers.length > 0);
 
-  const activeLayerCount = Object.values(layers).filter((l) => l.visible).length;
+  const activeLayerCount = Object.values(layers).filter((l) => l.visible && !HIDDEN_LAYER_IDS.has(l.id)).length;
 
   // 검색 필터
   const filteredDomains = searchQuery

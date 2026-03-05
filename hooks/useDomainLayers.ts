@@ -6,7 +6,6 @@ import type { LayerConfig } from '@/types/domain';
 import { toSelectedObjectFromFeature } from '@/lib/selected-object';
 
 // Data imports
-import { getCCTVGeoJSON } from '@/data/cctv';
 import { getNoFlyZonesGeoJSON, getMDLGeoJSON, getKADIZGeoJSON, getUXOZonesGeoJSON } from '@/data/defense';
 import { getPortsGeoJSON, getDangerZonesGeoJSON, getVTSGeoJSON, getVTSCoverageGeoJSON } from '@/data/maritime';
 import { getKTXRoutesGeoJSON, getSubwayRoutesGeoJSON, getStationsGeoJSON } from '@/data/transit';
@@ -29,23 +28,6 @@ export function useDomainLayers() {
   useEffect(() => {
     const layers: LayerConfig[] = [
       // ── CCTV (도메인 2.2) ──
-      {
-        id: 'cctv-markers',
-        domain: 'cctv',
-        name: 'CCTV 위치',
-        type: 'marker',
-        visible: false,
-        data: getCCTVGeoJSON(),
-        style: { color: '#00ff88', radius: 400, opacity: 0.9 },
-        onClick: (feature) =>
-          selectObject(
-            toSelectedObjectFromFeature(feature, {
-              id: 'cctv-markers',
-              domain: 'cctv',
-              type: 'marker',
-            })
-          ),
-      },
       {
         id: 'traffic-cctv-markers',
         domain: 'cctv',
@@ -167,6 +149,17 @@ export function useDomainLayers() {
         visible: false,
         data: getStationsGeoJSON(),
         style: { color: '#8b5cf6', radius: 350, opacity: 0.9 },
+      },
+
+      // ── 사회적 약자 (신규 메뉴 placeholder) ──
+      {
+        id: 'vulnerable-social-welfare-facilities',
+        domain: 'vulnerable',
+        name: '사회복지시설 정보 서비스(통합)',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#ec4899', radius: 500, opacity: 0.9 },
       },
     ];
 
