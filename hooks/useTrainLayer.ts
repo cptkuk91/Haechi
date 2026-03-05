@@ -148,6 +148,8 @@ export function useTrainLayer() {
     }
 
     const interval = setInterval(() => {
+      if (!useAppStore.getState().layers['train-live']?.visible) return;
+
       updateLayerData('train-live', buildTrainGeoJSON(Date.now()));
     }, 2000);
 

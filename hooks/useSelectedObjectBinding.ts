@@ -48,7 +48,7 @@ export function useSelectedObjectBinding() {
     let nextSelection: SelectedObject | null = null;
 
     for (const layer of Object.values(layers)) {
-      if (layer.domain !== selectedObject.domain || !layer.data?.features?.length) continue;
+      if (!layer.visible || layer.domain !== selectedObject.domain || !layer.data?.features?.length) continue;
 
       for (const feature of layer.data.features) {
         const objectId = deriveFeatureObjectId(feature, layer.id);

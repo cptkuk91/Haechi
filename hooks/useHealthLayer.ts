@@ -167,18 +167,22 @@ export function useHealthLayer() {
     const tick = () => {
       const now = Date.now();
       const state = useAppStore.getState();
+      const ls = state.layers;
 
-      const route = state.layers['health-ambulance-route']?.data;
+      const routeLayer = ls['health-ambulance-route'];
+      const route = routeLayer?.visible ? routeLayer.data : null;
       if (route) {
         updateLayerData('health-ambulance-route', updateAmbulanceRoute(route, now));
       }
 
-      const track = state.layers['health-ambulance-track']?.data;
+      const trackLayer = ls['health-ambulance-track'];
+      const track = trackLayer?.visible ? trackLayer.data : null;
       if (track && route) {
         updateLayerData('health-ambulance-track', updateAmbulanceTrack(track, route, now));
       }
 
-      const er = state.layers['health-er-capacity']?.data;
+      const erLayer = ls['health-er-capacity'];
+      const er = erLayer?.visible ? erLayer.data : null;
       if (er) {
         const next = updateERCapacity(er, now);
         updateLayerData('health-er-capacity', next.collection);

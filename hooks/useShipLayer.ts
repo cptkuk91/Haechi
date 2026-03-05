@@ -178,9 +178,14 @@ export function useShipLayer() {
     }
 
     const interval = setInterval(() => {
+      const state = useAppStore.getState().layers;
+      const shipVisible = state['ship-ais-live']?.visible;
+      const trailVisible = state['ship-trails']?.visible;
+      if (!shipVisible && !trailVisible) return;
+
       const now = Date.now();
-      updateLayerData('ship-ais-live', buildShipGeoJSON(now));
-      updateLayerData('ship-trails', buildShipTrailGeoJSON(now));
+      if (shipVisible) updateLayerData('ship-ais-live', buildShipGeoJSON(now));
+      if (trailVisible) updateLayerData('ship-trails', buildShipTrailGeoJSON(now));
     }, 3000);
 
     return () => clearInterval(interval);

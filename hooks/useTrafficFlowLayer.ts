@@ -155,11 +155,13 @@ export function useTrafficFlowLayer() {
     const tick = () => {
       const now = Date.now();
       const state = useAppStore.getState();
+      const ls = state.layers;
 
       let maxCongestion = 0;
       let focusCoordinates: [number, number] | undefined;
 
-      const bottleneckData = state.layers['highway-bottleneck']?.data;
+      const bottleneckLayer = ls['highway-bottleneck'];
+      const bottleneckData = bottleneckLayer?.visible ? bottleneckLayer.data : null;
       if (bottleneckData) {
         const next = updateTrafficLineCollection({
           collection: bottleneckData,
@@ -171,7 +173,8 @@ export function useTrafficFlowLayer() {
         focusCoordinates = next.focusCoordinates ?? focusCoordinates;
       }
 
-      const rerouteData = state.layers['highway-reroute']?.data;
+      const rerouteLayer = ls['highway-reroute'];
+      const rerouteData = rerouteLayer?.visible ? rerouteLayer.data : null;
       if (rerouteData) {
         const next = updateTrafficLineCollection({
           collection: rerouteData,
@@ -181,7 +184,8 @@ export function useTrafficFlowLayer() {
         updateLayerData('highway-reroute', next.collection);
       }
 
-      const incidentData = state.layers['highway-incidents']?.data;
+      const incidentLayer = ls['highway-incidents'];
+      const incidentData = incidentLayer?.visible ? incidentLayer.data : null;
       if (incidentData) {
         const next = updateIncidentCollection(incidentData, now);
         updateLayerData('highway-incidents', next.collection);

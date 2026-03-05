@@ -36,23 +36,6 @@ export default function MapCanvas() {
     bounds: { west: 124, south: 33, east: 132, north: 39 },
   });
 
-  // Worker ref
-  const workerRef = useRef<Worker | null>(null);
-
-  // Web Worker 초기화
-  useEffect(() => {
-    try {
-      const worker = new Worker(
-        new URL('../../workers/geo-filter.worker.ts', import.meta.url)
-      );
-      workerRef.current = worker;
-      return () => worker.terminate();
-    } catch {
-      // Worker 지원 안 되는 환경 → 메인 스레드 fallback
-      return;
-    }
-  }, []);
-
   // FPS 카운터
   useEffect(() => {
     if (!showFPS) return;

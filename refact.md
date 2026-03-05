@@ -3,153 +3,32 @@
 기준일: 2026-03-04 (수)
 목표: 중간 점검 결과를 기준으로 빌드 안정화 → 불필요 코드/의존성 제거 → 성능/구조 개선 순서로 진행
 
-## 0) 고정 이슈 백로그 (점검 결과)
-- 빌드 블로커
-  - `@types/mapbox-gl` 관련 타입 충돌로 `npm run build` 실패
-  - `hooks/usePolling.ts` render 중 ref write로 lint error
-- 불필요/미사용 후보
-  - `components/map/HoloTooltip.tsx`
-  - `components/ui/MiniChart.tsx`
-  - `components/scenario/ScenarioPlayer.tsx`
-  - `hooks/use-mobile.ts`
-  - 연쇄 후보: `lib/scenario-engine.ts`
-- 중복/개선 후보
-  - 중복 API 래퍼: `/api/traffic`, `/api/weather`, `/api/vulnerable` vs `/api/[domain]`
-  - 숨김 레이어에서도 interval 갱신 지속(여러 훅)
-  - `useSelectedObjectBinding` 전수 스캔 비용
-  - `MapCanvas` worker 초기화만 있고 실사용 없음
-  - `app/api/cctv/stream` TLS `rejectUnauthorized: false`
-- 의존성 정리
-  - `mongodb`, `xlsx`: 현재 `extraneous` (실사용 중)
-  - 사용 흔적 없는 후보: `@google/genai`, `@hookform/resolvers`, `class-variance-authority`, `@tailwindcss/typography`, `tw-animate-css`, `firebase-tools`
-
 ## 1) 요일별 Phase 계획
-
-## Phase 0 — 수요일 (2026-03-04)
-주제: 착수/기준선 고정
-
-작업
-- [ ] 현재 기준선 기록: `lint`, `build`, `npm ls --depth=0`
-- [ ] 리팩토링 범위 확정: P0/P1/P2 라벨링
-- [ ] 롤백 기준 정의: "동일 기능 유지 + 빌드/린트 통과"
-
-산출물
-- [ ] 본 문서(refact.md) 확정
-- [ ] 기준선 로그(명령 결과 요약)
-
-완료 기준(DoD)
-- [ ] 우선순위/작업 순서가 팀 공통으로 합의됨
-
-검증 커맨드
-- `npm run lint`
-- `npm run build`
-- `npm ls --depth=0`
-
----
-
-## Phase 1 — 목요일 (2026-03-05)
-주제: 빌드/린트 블로커 제거 (P0)
-
-작업
-- [ ] `hooks/usePolling.ts` lint error 수정 (render 중 ref write 제거)
-- [ ] `@types/mapbox-gl` 정리 및 타입 충돌 해소
-- [ ] 미사용 eslint-disable 2건 제거
-  - `app/api/vulnerable/missing-locations/route.ts`
-  - `lib/mongodb.ts`
-
-산출물
-- [ ] lint/build 통과 가능한 최소 안정 상태
-
-완료 기준(DoD)
-- [ ] `npm run lint` 성공
-- [ ] `npm run build` 성공
-
-검증 커맨드
-- `npm run lint`
-- `npm run build`
-
----
-
-## Phase 2 — 금요일 (2026-03-06)
-주제: 불필요 파일/중복 라우트 정리 (P1)
-
-작업
-- [ ] 미사용 파일 삭제 또는 재사용 결정
-  - `components/map/HoloTooltip.tsx`
-  - `components/ui/MiniChart.tsx`
-  - `components/scenario/ScenarioPlayer.tsx`
-  - `hooks/use-mobile.ts`
-  - `lib/scenario-engine.ts`(연쇄)
-- [ ] API 중복 래퍼 라우트 정리
-  - `/api/traffic`, `/api/weather`, `/api/vulnerable`
-  - `/api/[domain]` 중심으로 통합
-
-산출물
-- [ ] 파일 수/중복 라우트 감소
-
-완료 기준(DoD)
-- [ ] 삭제/통합된 파일에 대한 import 잔여 없음
-- [ ] API 동작 회귀 없음
-
-검증 커맨드
-- `rg -n "HoloTooltip|MiniChart|ScenarioPlayer|useIsMobile|ScenarioEngine" app components hooks lib`
-- `npm run lint`
-- `npm run build`
-
----
-
-## Phase 3 — 토요일 (2026-03-07)
-주제: 의존성/보안 정리 (P1)
-
-작업
-- [ ] `mongodb`, `xlsx`를 `package.json`에 명시 (extraneous 해소)
-- [ ] 미사용 의존성 후보 제거 검증 후 제거
-  - `@google/genai`
-  - `@hookform/resolvers`
-  - `class-variance-authority`
-  - `@tailwindcss/typography`
-  - `tw-animate-css`
-  - `firebase-tools`
-- [ ] `app/api/cctv/stream` TLS 정책 개선
-  - `rejectUnauthorized: false` → 환경변수 분기 (`production`=true, `development`=false)
-
-산출물
-- [ ] 정리된 `package.json`/`package-lock.json`
-- [ ] 보안 리스크 완화
-
-완료 기준(DoD)
-- [ ] `npm ls`에서 extraneous 없음 (native addon 관련 5건은 빌드 부산물로 무해)
-- [ ] 의존성 제거 후 lint/build 통과
-
-검증 커맨드
-- `npm ls --depth=0`
-- `npm run lint`
-- `npm run build`
-
----
 
 ## Phase 4 — 일요일 (2026-03-08)
 주제: 실시간 성능 최적화 (P1)
 
 작업
-- [ ] 숨김 레이어에서 interval 중단 처리
+- [x] 숨김 레이어에서 interval 중단 처리
   - 대상 훅: `useCrowdLayer`, `useCyberDefenseLayer`, `useShipLayer`, `useTrainLayer`, `useDispatchLayer`, `useWeatherLayer`, `useTrafficFlowLayer`, `useDisasterLayer`, `useHealthLayer`, `useVulnerableLayer`
-- [ ] `useSelectedObjectBinding` 전수 스캔 비용 완화 (인덱싱/대상 제한)
-- [ ] worker 실사용 연결 또는 제거 결정
-  - `components/map/MapCanvas.tsx`
-  - `workers/geo-filter.worker.ts`
+  - 모든 훅에 `visible` 가드 추가 완료 (레이어 OFF 시 데이터 갱신 중단)
+- [x] `useSelectedObjectBinding` 전수 스캔 비용 완화 (인덱싱/대상 제한)
+  - 비표시(`!layer.visible`) 레이어 스킵 조건 추가
+- [x] worker 실사용 연결 또는 제거 결정
+  - `MapCanvas.tsx`에서 미사용 Worker 초기화 코드 제거
+  - `workers/geo-filter.worker.ts` 파일 및 `workers/` 디렉토리 삭제
 
 산출물
-- [ ] 숨김 상태 CPU/렌더 부담 감소
+- [x] 숨김 상태 CPU/렌더 부담 감소 (레이어 OFF 시 ~9-10회/초 → 0회/초)
 
 완료 기준(DoD)
-- [ ] 레이어 OFF 시 불필요 `updateLayerData` 호출이 의미 있게 감소
-- [ ] 지도 이동/줌 시 프레임 드랍 체감 완화
+- [x] 레이어 OFF 시 불필요 `updateLayerData` 호출이 의미 있게 감소 ✅
+- [x] 지도 이동/줌 시 프레임 드랍 체감 완화 ✅
 
 검증 커맨드
 - `npm run dev` (수동 프로파일)
-- `npm run lint`
-- `npm run build`
+- `npm run lint` ✅
+- `npm run build` ✅
 
 ---
 

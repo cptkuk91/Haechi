@@ -266,10 +266,15 @@ export function useDispatchLayer() {
     }
 
     const interval = setInterval(() => {
+      const state = useAppStore.getState().layers;
+      const vehiclesVisible = state['dispatch-vehicles']?.visible;
+      const routesVisible = state['dispatch-routes']?.visible;
+      if (!vehiclesVisible && !routesVisible) return;
+
       const now = Date.now();
       const vehicleData = buildDispatchVehicleGeoJSON(now);
-      updateLayerData('dispatch-vehicles', vehicleData);
-      updateLayerData('dispatch-routes', buildDispatchRouteGeoJSON(now));
+      if (vehiclesVisible) updateLayerData('dispatch-vehicles', vehicleData);
+      if (routesVisible) updateLayerData('dispatch-routes', buildDispatchRouteGeoJSON(now));
 
       // 도착 알림
       for (const feature of vehicleData.features) {

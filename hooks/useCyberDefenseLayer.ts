@@ -152,9 +152,14 @@ export function useCyberDefenseLayer() {
     }
 
     const interval = setInterval(() => {
+      const state = useAppStore.getState().layers;
+      const cyberVisible = state['cyber-attacks']?.visible;
+      const defenseVisible = state['defense-intrusion']?.visible;
+      if (!cyberVisible && !defenseVisible) return;
+
       const now = Date.now();
-      updateLayerData('cyber-attacks', buildCyberAttackGeoJSON(now));
-      updateLayerData('defense-intrusion', buildIntrusionGeoJSON(now));
+      if (cyberVisible) updateLayerData('cyber-attacks', buildCyberAttackGeoJSON(now));
+      if (defenseVisible) updateLayerData('defense-intrusion', buildIntrusionGeoJSON(now));
     }, 2500);
 
     return () => clearInterval(interval);

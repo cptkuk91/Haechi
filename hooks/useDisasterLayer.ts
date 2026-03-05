@@ -154,11 +154,15 @@ export function useDisasterLayer() {
     const tick = () => {
       const now = Date.now();
       const state = useAppStore.getState();
+      const ls = state.layers;
 
-      const wildfire = state.layers['disaster-wildfire-points']?.data;
+      const wildfireLayer = ls['disaster-wildfire-points'];
       const wildfireSource = state.layerDataSource['disaster-wildfire-points'];
-      const quake = state.layers['disaster-earthquake-ripple']?.data;
-      const flood = state.layers['disaster-flood-risk']?.data;
+      const wildfire = wildfireLayer?.visible ? wildfireLayer.data : null;
+      const quakeLayer = ls['disaster-earthquake-ripple'];
+      const quake = quakeLayer?.visible ? quakeLayer.data : null;
+      const floodLayer = ls['disaster-flood-risk'];
+      const flood = floodLayer?.visible ? floodLayer.data : null;
 
       let hottest = 0;
       let strongest = 0;

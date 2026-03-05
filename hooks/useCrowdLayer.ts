@@ -113,6 +113,8 @@ export function useCrowdLayer() {
     }
 
     const interval = setInterval(() => {
+      if (!useAppStore.getState().layers['crowd-density']?.visible) return;
+
       const now = Date.now();
       const data = buildCrowdGeoJSON(now);
       updateLayerData('crowd-density', data);

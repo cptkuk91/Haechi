@@ -130,13 +130,15 @@ export function useVulnerableLayer() {
     const tick = () => {
       const now = Date.now();
       const state = useAppStore.getState();
+      const ls = state.layers;
 
-      const amber = state.layers['vulnerable-amber-radius']?.data;
-      if (amber) {
-        updateLayerData('vulnerable-amber-radius', updateAmberRadius(amber, now));
+      const amberLayer = ls['vulnerable-amber-radius'];
+      if (amberLayer?.visible && amberLayer.data) {
+        updateLayerData('vulnerable-amber-radius', updateAmberRadius(amberLayer.data, now));
       }
 
-      const iot = state.layers['vulnerable-emergency-iot']?.data;
+      const iotLayer = ls['vulnerable-emergency-iot'];
+      const iot = iotLayer?.visible ? iotLayer.data : null;
       if (iot) {
         const next = updateIot(iot, now);
         updateLayerData('vulnerable-emergency-iot', next.collection);
@@ -157,9 +159,9 @@ export function useVulnerableLayer() {
         }
       }
 
-      const support = state.layers['vulnerable-support-link']?.data;
-      if (support) {
-        updateLayerData('vulnerable-support-link', updateSupportLink(support, now));
+      const supportLayer = ls['vulnerable-support-link'];
+      if (supportLayer?.visible && supportLayer.data) {
+        updateLayerData('vulnerable-support-link', updateSupportLink(supportLayer.data, now));
       }
     };
 

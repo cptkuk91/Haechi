@@ -139,8 +139,10 @@ export function useWeatherLayer() {
     const tick = () => {
       const now = Date.now();
       const state = useAppStore.getState();
+      const ls = state.layers;
 
-      const rainColumns = state.layers['weather-rainfall-column']?.data;
+      const rainColumnLayer = ls['weather-rainfall-column'];
+      const rainColumns = rainColumnLayer?.visible ? rainColumnLayer.data : null;
       if (rainColumns) {
         const next = updateRainColumn(rainColumns, now);
         updateLayerData('weather-rainfall-column', next.collection);
@@ -161,14 +163,14 @@ export function useWeatherLayer() {
         }
       }
 
-      const rainHeat = state.layers['weather-rainfall-heat']?.data;
-      if (rainHeat) {
-        updateLayerData('weather-rainfall-heat', updateRainHeat(rainHeat, now));
+      const rainHeatLayer = ls['weather-rainfall-heat'];
+      if (rainHeatLayer?.visible && rainHeatLayer.data) {
+        updateLayerData('weather-rainfall-heat', updateRainHeat(rainHeatLayer.data, now));
       }
 
-      const windParticles = state.layers['weather-wind-particles']?.data;
-      if (windParticles) {
-        updateLayerData('weather-wind-particles', updateWindParticles(windParticles, now));
+      const windLayer = ls['weather-wind-particles'];
+      if (windLayer?.visible && windLayer.data) {
+        updateLayerData('weather-wind-particles', updateWindParticles(windLayer.data, now));
       }
     };
 
