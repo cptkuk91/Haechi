@@ -51,22 +51,22 @@
 주제: 빌드/린트 블로커 제거 (P0)
 
 작업
-- [x] `hooks/usePolling.ts` lint error 수정 (render 중 ref write 제거)
-- [x] `@types/mapbox-gl` 정리 및 타입 충돌 해소
-- [x] 미사용 eslint-disable 2건 제거
+- [ ] `hooks/usePolling.ts` lint error 수정 (render 중 ref write 제거)
+- [ ] `@types/mapbox-gl` 정리 및 타입 충돌 해소
+- [ ] 미사용 eslint-disable 2건 제거
   - `app/api/vulnerable/missing-locations/route.ts`
   - `lib/mongodb.ts`
 
 산출물
-- [x] lint/build 통과 가능한 최소 안정 상태
+- [ ] lint/build 통과 가능한 최소 안정 상태
 
 완료 기준(DoD)
-- [x] `npm run lint` 성공 ✅
-- [x] `npm run build` 성공 ✅
+- [ ] `npm run lint` 성공
+- [ ] `npm run build` 성공
 
 검증 커맨드
-- `npm run lint` ✅
-- `npm run build` ✅
+- `npm run lint`
+- `npm run build`
 
 ---
 
@@ -74,22 +74,22 @@
 주제: 불필요 파일/중복 라우트 정리 (P1)
 
 작업
-- [x] 미사용 파일 삭제 또는 재사용 결정
+- [ ] 미사용 파일 삭제 또는 재사용 결정
   - `components/map/HoloTooltip.tsx`
   - `components/ui/MiniChart.tsx`
   - `components/scenario/ScenarioPlayer.tsx`
   - `hooks/use-mobile.ts`
   - `lib/scenario-engine.ts`(연쇄)
-- [x] API 중복 래퍼 라우트 정리
+- [ ] API 중복 래퍼 라우트 정리
   - `/api/traffic`, `/api/weather`, `/api/vulnerable`
   - `/api/[domain]` 중심으로 통합
 
 산출물
-- [x] 파일 수/중복 라우트 감소
+- [ ] 파일 수/중복 라우트 감소
 
 완료 기준(DoD)
-- [x] 삭제/통합된 파일에 대한 import 잔여 없음
-- [x] API 동작 회귀 없음
+- [ ] 삭제/통합된 파일에 대한 import 잔여 없음
+- [ ] API 동작 회귀 없음
 
 검증 커맨드
 - `rg -n "HoloTooltip|MiniChart|ScenarioPlayer|useIsMobile|ScenarioEngine" app components hooks lib`
@@ -102,30 +102,29 @@
 주제: 의존성/보안 정리 (P1)
 
 작업
-- [x] `mongodb`, `xlsx`를 `package.json`에 명시 (extraneous 해소)
-  - `mongodb`: Phase 1에서 설치 완료, `xlsx`: 이미 제거됨 (사용처 없음)
-- [x] 미사용 의존성 후보 제거 검증 후 제거
+- [ ] `mongodb`, `xlsx`를 `package.json`에 명시 (extraneous 해소)
+- [ ] 미사용 의존성 후보 제거 검증 후 제거
   - `@google/genai`
   - `@hookform/resolvers`
   - `class-variance-authority`
   - `@tailwindcss/typography`
   - `tw-animate-css`
   - `firebase-tools`
-- [x] `app/api/cctv/stream` TLS 정책 개선
+- [ ] `app/api/cctv/stream` TLS 정책 개선
   - `rejectUnauthorized: false` → 환경변수 분기 (`production`=true, `development`=false)
 
 산출물
-- [x] 정리된 `package.json`/`package-lock.json`
-- [x] 보안 리스크 완화
+- [ ] 정리된 `package.json`/`package-lock.json`
+- [ ] 보안 리스크 완화
 
 완료 기준(DoD)
-- [x] `npm ls`에서 extraneous 없음 (native addon 관련 5건은 빌드 부산물로 무해) ✅
-- [x] 의존성 제거 후 lint/build 통과 ✅
+- [ ] `npm ls`에서 extraneous 없음 (native addon 관련 5건은 빌드 부산물로 무해)
+- [ ] 의존성 제거 후 lint/build 통과
 
 검증 커맨드
-- `npm ls --depth=0` ✅
-- `npm run lint` ✅
-- `npm run build` ✅
+- `npm ls --depth=0`
+- `npm run lint`
+- `npm run build`
 
 ---
 
