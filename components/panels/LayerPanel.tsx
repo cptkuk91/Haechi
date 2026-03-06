@@ -245,6 +245,8 @@ export default function LayerPanel() {
                                     ? '사이버 공격 빔 (보류)'
                                     : layer.id === 'infra-public-facility-safety' && layerDataSource[layer.id] === 'upstream'
                                       ? '공공시설물 안전 (완료)'
+                                    : layer.id === 'infra-highway-tollgates' && layerDataSource[layer.id] === 'upstream'
+                                      ? '도로공사 영업소 (완료)'
                                     : layer.id === 'highway-incidents' && layerDataSource[layer.id] === 'upstream'
                                       ? '서울 실시간 돌발정보 (완료)'
                                     : layer.id === 'disaster-wildfire-points' && layerDataSource[layer.id] === 'upstream'

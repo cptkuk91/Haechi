@@ -44,6 +44,16 @@ function isPublicFacilitySafetySelection(selectedObject: { domain: string; prope
   );
 }
 
+function isHighwayTollgateSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'infra') return false;
+  const properties = selectedObject.properties;
+  return (
+    typeof properties.unitCode === 'string'
+    || typeof properties.routeNo === 'string'
+    || typeof properties.routeName === 'string'
+  );
+}
+
 function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
   const name = pickFirstString(properties, ['name', 'fac_nam']);
   const facilityType = pickFirstString(properties, ['facilityType', 'category', 'cat_nam']);
@@ -161,6 +171,31 @@ function buildPublicFacilitySafetyEntries(properties: Record<string, unknown>): 
   return entries;
 }
 
+function buildHighwayTollgateEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'unitName']);
+  const unitCode = pickFirstString(properties, ['unitCode']);
+  const routeName = pickFirstString(properties, ['routeName']);
+  const routeNo = pickFirstString(properties, ['routeNo']);
+  const useYn = pickFirstString(properties, ['useYn', 'status']);
+
+  const entries: Array<[string, unknown]> = [
+    ['영업소명', name ?? '-'],
+    ['노선명', routeName ?? '-'],
+  ];
+
+  if (unitCode) {
+    entries.push(['영업소코드', unitCode]);
+  }
+  if (routeNo) {
+    entries.push(['노선코드', routeNo]);
+  }
+  if (useYn) {
+    entries.push(['사용여부', useYn]);
+  }
+
+  return entries;
+}
+
 export default function StatusPanel() {
   const selectedObject = useAppStore((s) => s.selectedObject);
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen);
@@ -172,6 +207,9 @@ export default function StatusPanel() {
 
   const selectedEntries = useMemo(() => {
     if (!selectedObject) return [];
+    if (isHighwayTollgateSelection(selectedObject)) {
+      return buildHighwayTollgateEntries(selectedObject.properties);
+    }
     if (isPublicFacilitySafetySelection(selectedObject)) {
       return buildPublicFacilitySafetyEntries(selectedObject.properties);
     }

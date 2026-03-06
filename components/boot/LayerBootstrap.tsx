@@ -23,6 +23,7 @@ import { useChildWelfareFacilitiesLayer } from '@/hooks/useChildWelfareFacilitie
 import { useDisabledFacilitiesLayer } from '@/hooks/useDisabledFacilitiesLayer';
 import { useMulticulturalSupportCentersLayer } from '@/hooks/useMulticulturalSupportCentersLayer';
 import { usePublicFacilitySafetyLayer } from '@/hooks/usePublicFacilitySafetyLayer';
+import { useHighwayTollgatesLayer } from '@/hooks/useHighwayTollgatesLayer';
 
 export default function LayerBootstrap() {
   useDomainLayers();
@@ -48,6 +49,7 @@ export default function LayerBootstrap() {
   useDisabledFacilitiesLayer();
   useMulticulturalSupportCentersLayer();
   usePublicFacilitySafetyLayer();
+  useHighwayTollgatesLayer();
 
   return null;
 }

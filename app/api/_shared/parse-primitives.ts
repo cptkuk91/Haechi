@@ -72,6 +72,9 @@ export function extractRowsFromCommonJson(raw: unknown): JsonRecord[] {
   const dataRows = toArray(raw.data);
   if (dataRows.length > 0) return dataRows;
 
+  const listRows = toArray(raw.list);
+  if (listRows.length > 0) return listRows;
+
   const response = isRecord(raw.response) ? raw.response : null;
   const bodyCandidates = [
     response && isRecord(response.body) ? response.body : null,
@@ -94,6 +97,9 @@ export function extractRowsFromCommonJson(raw: unknown): JsonRecord[] {
 
     const nestedDataRows = toArray(body.data);
     if (nestedDataRows.length > 0) return nestedDataRows;
+
+    const nestedListRows = toArray(body.list);
+    if (nestedListRows.length > 0) return nestedListRows;
   }
 
   for (const rawItems of [raw.items, raw.Items]) {

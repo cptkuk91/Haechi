@@ -169,6 +169,23 @@ export function useDomainLayers() {
             })
           ),
       },
+      {
+        id: 'infra-highway-tollgates',
+        domain: 'infra',
+        name: '도로공사 영업소',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#facc15', radius: 520, opacity: 0.92 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'infra-highway-tollgates',
+              domain: 'infra',
+              type: 'marker',
+            })
+          ),
+      },
 
       // ── 사회적 약자 (신규 메뉴 placeholder) ──
       {
