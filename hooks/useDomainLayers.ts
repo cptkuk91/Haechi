@@ -187,6 +187,42 @@ export function useDomainLayers() {
           ),
       },
 
+      // ── 보건/의료 (실데이터 placeholder) ──
+      {
+        id: 'health-emergency-room-location',
+        domain: 'health',
+        name: '응급실 위치',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#34d399', radius: 560, opacity: 0.92 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'health-emergency-room-location',
+              domain: 'health',
+              type: 'marker',
+            })
+          ),
+      },
+      {
+        id: 'health-trauma-centers',
+        domain: 'health',
+        name: '외상센터',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#ef4444', radius: 580, opacity: 0.92 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'health-trauma-centers',
+              domain: 'health',
+              type: 'marker',
+            })
+          ),
+      },
+
       // ── 사회적 약자 (신규 메뉴 placeholder) ──
       {
         id: 'vulnerable-elderly-welfare-facilities',

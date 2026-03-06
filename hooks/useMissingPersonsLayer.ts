@@ -52,6 +52,7 @@ export function useMissingPersonsLayer() {
     placeholderData: (previousData) => previousData,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+    enabled: visible,
   });
 
   const query = useQuery({

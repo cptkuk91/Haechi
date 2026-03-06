@@ -59,7 +59,6 @@ export function useCctvLayer() {
   const seenWarnings = useRef<Set<string>>(new Set());
   const bboxParam = toBboxParam(mapBounds);
 
-  // 토글 OFF 상태에서도 실데이터 연동 상태(완료) 표기를 위해 최소 1건 소스 확인
   const sourceProbeQuery = useQuery({
     queryKey: ['cctv', 'positions', 'source-probe'],
     queryFn: () => fetchCctvData(1, null),
@@ -67,6 +66,7 @@ export function useCctvLayer() {
     retry: 1,
     placeholderData: (previousData) => previousData,
     refetchOnWindowFocus: false,
+    enabled: trafficCctvVisible,
   });
 
   const query = useQuery({

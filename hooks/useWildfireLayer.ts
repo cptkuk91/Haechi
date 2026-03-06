@@ -60,6 +60,7 @@ export function useWildfireLayer() {
     placeholderData: (previousData) => previousData,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+    enabled: visible,
   });
 
   const query = useQuery({
@@ -72,7 +73,7 @@ export function useWildfireLayer() {
     enabled: visible,
   });
 
-  usePolling(['disaster', 'wildfire-locations', 'source-probe', 'v2'], SOURCE_PROBE_INTERVAL_MS);
+  usePolling(['disaster', 'wildfire-locations', 'source-probe', 'v2'], SOURCE_PROBE_INTERVAL_MS, visible);
   usePolling([...QUERY_KEY], REFRESH_INTERVAL_MS, visible);
 
   useEffect(() => {

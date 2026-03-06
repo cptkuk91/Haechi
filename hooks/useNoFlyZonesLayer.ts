@@ -31,6 +31,7 @@ export function useNoFlyZonesLayer() {
   const updateLayerData = useAppStore((s) => s.updateLayerData);
   const setLayerDataSource = useAppStore((s) => s.setLayerDataSource);
   const setDomainDataSource = useAppStore((s) => s.setDomainDataSource);
+  const visible = useAppStore((s) => s.layers['no-fly-zones']?.visible ?? false);
   const seenWarnings = useRef<Set<string>>(new Set());
 
   const query = useQuery({
@@ -40,10 +41,11 @@ export function useNoFlyZonesLayer() {
     retry: 2,
     placeholderData: (previousData) => previousData,
     refetchOnWindowFocus: false,
+    enabled: visible,
   });
 
   // 공역 경계는 변화가 잦지 않으므로 10분 폴링
-  usePolling(['aviation', 'no-fly'], 10 * 60_000);
+  usePolling(['aviation', 'no-fly'], 10 * 60_000, visible);
 
   useEffect(() => {
     const payload = query.data;

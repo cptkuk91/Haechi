@@ -19,6 +19,9 @@ const HIDDEN_LAYER_IDS = new Set([
 const RESTRICTED_LAYER_IDS = new Set([
   'cyber-attacks',
 ]);
+const PERSISTENT_EMPTY_DOMAIN_IDS = new Set([
+  'health',
+]);
 const RESTRICTED_LAYER_ALERT_ID = 'alert-restricted-cyber-access';
 const RESTRICTED_LAYER_ALERT_MESSAGE = '인가 된 사용자만 확인 가능합니다.';
 
@@ -104,7 +107,7 @@ export default function LayerPanel() {
   const layersByDomain = DOMAIN_REGISTRY.map((domain) => {
     const domainLayers = Object.values(layers).filter((l) => l.domain === domain.id && !HIDDEN_LAYER_IDS.has(l.id));
     return { ...domain, layers: domainLayers };
-  }).filter((d) => d.layers.length > 0);
+  }).filter((d) => d.layers.length > 0 || PERSISTENT_EMPTY_DOMAIN_IDS.has(d.id));
 
   const activeLayerCount = Object.values(layers).filter((l) => l.visible && !HIDDEN_LAYER_IDS.has(l.id)).length;
 
@@ -236,91 +239,99 @@ export default function LayerPanel() {
                           className="overflow-hidden"
                         >
                           <div className="pl-6 space-y-0.5 pb-1">
-                            {domain.layers.map((layer) => (
-                              <LayerItem
-                                key={layer.id}
-                                layer={layer}
-                                label={
-                                  layer.id === 'cyber-attacks'
-                                    ? '사이버 공격 빔 (보류)'
-                                    : layer.id === 'infra-public-facility-safety' && layerDataSource[layer.id] === 'upstream'
-                                      ? '공공시설물 안전 (완료)'
-                                    : layer.id === 'infra-highway-tollgates' && layerDataSource[layer.id] === 'upstream'
-                                      ? '도로공사 영업소 (완료)'
-                                    : layer.id === 'highway-incidents' && layerDataSource[layer.id] === 'upstream'
-                                      ? '서울 실시간 돌발정보 (완료)'
-                                    : layer.id === 'disaster-wildfire-points' && layerDataSource[layer.id] === 'upstream'
-                                      ? '산불 발생 지점 (완료)'
-                                    : layer.id === 'no-fly-zones' && layerDataSource[layer.id] === 'upstream'
-                                      ? '비행금지구역 (완료)'
-                                    : layer.id === 'traffic-cctv-markers' && layerDataSource[layer.id] === 'upstream'
-                                      ? '교통관제 CCTV (완료)'
-                                    : layer.id === 'health-emergency-room-location' && layerDataSource[layer.id] === 'upstream'
-                                      ? '응급실 위치 (완료)'
-                                    : layer.id === 'vulnerable-missing-persons' && layerDataSource[layer.id] === 'upstream'
-                                      ? '실종 발생 위치 (완료)'
-                                    : layer.id === 'vulnerable-elderly-welfare-facilities' && layerDataSource[layer.id] === 'upstream'
-                                      ? '노인복지시설 (완료)'
-                                    : layer.id === 'vulnerable-child-welfare-facilities' && layerDataSource[layer.id] === 'upstream'
-                                      ? '아동복지시설 (완료)'
-                                    : layer.id === 'vulnerable-disabled-facilities' && layerDataSource[layer.id] === 'upstream'
-                                      ? '장애인 편의시설 (완료)'
-                                    : layer.id === 'vulnerable-multicultural-support-centers' && layerDataSource[layer.id] === 'upstream'
-                                      ? '다문화가족지원센터 (완료)'
-                                    : undefined
-                                }
-                                onToggle={() => handleLayerToggle(layer.id)}
-                              >
-                                {layer.id === 'traffic-cctv-markers' && layer.visible && (
-                                  <div className="px-2 pb-2">
-                                    <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
-                                      <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
-                                        Max Markers
-                                      </span>
-                                      <select
-                                        value={cctvMaxDisplayCount}
-                                        onChange={(event) => {
-                                          const nextValue = Number(event.target.value);
-                                          setCctvMaxDisplayCount(nextValue);
-                                          setCctvCustomInput(String(nextValue));
-                                        }}
-                                        className="min-w-[84px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
-                                      >
-                                        {CCTV_MAX_DISPLAY_OPTIONS.map((count) => (
-                                          <option key={count} value={count}>
-                                            {count.toLocaleString()}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
-                                    <label className="mt-1.5 flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
-                                      <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
-                                        Custom
-                                      </span>
-                                      <input
-                                        type="number"
-                                        min={CCTV_MIN_DISPLAY}
-                                        max={CCTV_MAX_DISPLAY}
-                                        step={100}
-                                        value={cctvCustomInput}
-                                        onChange={(event) => setCctvCustomInput(event.target.value)}
-                                        onBlur={commitCctvCustomInput}
-                                        onKeyDown={(event) => {
-                                          if (event.key === 'Enter') {
-                                            event.preventDefault();
-                                            commitCctvCustomInput();
-                                          }
-                                        }}
-                                        className="w-[92px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
-                                      />
-                                    </label>
-                                    <p className="px-1 pt-1 text-[9px] tracking-wider text-cyan-200/80 font-mono">
-                                      Range: {CCTV_MIN_DISPLAY.toLocaleString()} - {CCTV_MAX_DISPLAY.toLocaleString()}
-                                    </p>
-                                  </div>
-                                )}
-                              </LayerItem>
-                            ))}
+                            {domain.layers.length === 0 ? (
+                              <div className="rounded-md border border-cyan-500/20 bg-cyan-900/10 px-2.5 py-2 text-[10px] tracking-wider text-cyan-200/75 font-mono">
+                                등록된 레이어 없음
+                              </div>
+                            ) : (
+                              domain.layers.map((layer) => (
+                                <LayerItem
+                                  key={layer.id}
+                                  layer={layer}
+                                  label={
+                                    layer.id === 'cyber-attacks'
+                                      ? '사이버 공격 빔 (보류)'
+                                      : layer.id === 'infra-public-facility-safety' && layerDataSource[layer.id] === 'upstream'
+                                        ? '공공시설물 안전 (완료)'
+                                      : layer.id === 'infra-highway-tollgates' && layerDataSource[layer.id] === 'upstream'
+                                        ? '도로공사 영업소 (완료)'
+                                      : layer.id === 'highway-incidents' && layerDataSource[layer.id] === 'upstream'
+                                        ? '서울 실시간 돌발정보 (완료)'
+                                      : layer.id === 'disaster-wildfire-points' && layerDataSource[layer.id] === 'upstream'
+                                        ? '산불 발생 지점 (완료)'
+                                      : layer.id === 'no-fly-zones' && layerDataSource[layer.id] === 'upstream'
+                                        ? '비행금지구역 (완료)'
+                                      : layer.id === 'traffic-cctv-markers' && layerDataSource[layer.id] === 'upstream'
+                                        ? '교통관제 CCTV (완료)'
+                                      : layer.id === 'health-emergency-room-location' && layerDataSource[layer.id] === 'upstream'
+                                        ? '응급실 위치 (완료)'
+                                      : layer.id === 'health-trauma-centers' && layerDataSource[layer.id] === 'upstream'
+                                        ? '외상센터 (완료)'
+                                      : layer.id === 'vulnerable-missing-persons' && layerDataSource[layer.id] === 'upstream'
+                                        ? '실종 발생 위치 (완료)'
+                                      : layer.id === 'vulnerable-elderly-welfare-facilities' && layerDataSource[layer.id] === 'upstream'
+                                        ? '노인복지시설 (완료)'
+                                      : layer.id === 'vulnerable-child-welfare-facilities' && layerDataSource[layer.id] === 'upstream'
+                                        ? '아동복지시설 (완료)'
+                                      : layer.id === 'vulnerable-disabled-facilities' && layerDataSource[layer.id] === 'upstream'
+                                        ? '장애인 편의시설 (완료)'
+                                      : layer.id === 'vulnerable-multicultural-support-centers' && layerDataSource[layer.id] === 'upstream'
+                                        ? '다문화가족지원센터 (완료)'
+                                      : undefined
+                                  }
+                                  onToggle={() => handleLayerToggle(layer.id)}
+                                >
+                                  {layer.id === 'traffic-cctv-markers' && layer.visible && (
+                                    <div className="px-2 pb-2">
+                                      <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                        <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
+                                          Max Markers
+                                        </span>
+                                        <select
+                                          value={cctvMaxDisplayCount}
+                                          onChange={(event) => {
+                                            const nextValue = Number(event.target.value);
+                                            setCctvMaxDisplayCount(nextValue);
+                                            setCctvCustomInput(String(nextValue));
+                                          }}
+                                          className="min-w-[84px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                        >
+                                          {CCTV_MAX_DISPLAY_OPTIONS.map((count) => (
+                                            <option key={count} value={count}>
+                                              {count.toLocaleString()}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                      <label className="mt-1.5 flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                        <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
+                                          Custom
+                                        </span>
+                                        <input
+                                          type="number"
+                                          min={CCTV_MIN_DISPLAY}
+                                          max={CCTV_MAX_DISPLAY}
+                                          step={100}
+                                          value={cctvCustomInput}
+                                          onChange={(event) => setCctvCustomInput(event.target.value)}
+                                          onBlur={commitCctvCustomInput}
+                                          onKeyDown={(event) => {
+                                            if (event.key === 'Enter') {
+                                              event.preventDefault();
+                                              commitCctvCustomInput();
+                                            }
+                                          }}
+                                          className="w-[92px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                        />
+                                      </label>
+                                      <p className="px-1 pt-1 text-[9px] tracking-wider text-cyan-200/80 font-mono">
+                                        Range: {CCTV_MIN_DISPLAY.toLocaleString()} - {CCTV_MAX_DISPLAY.toLocaleString()}
+                                      </p>
+                                    </div>
+                                  )}
+                                </LayerItem>
+                              ))
+                            )}
                           </div>
                         </motion.div>
                       )}

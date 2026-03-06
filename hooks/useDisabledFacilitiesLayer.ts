@@ -73,6 +73,7 @@ export function useDisabledFacilitiesLayer() {
     retry: 1,
     placeholderData: (previousData) => previousData,
     refetchOnWindowFocus: false,
+    enabled: visible,
   });
 
   const query = useQuery({

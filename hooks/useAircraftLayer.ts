@@ -215,7 +215,6 @@ export function useAircraftLayer() {
     registered.current = true;
   }, [addLayer, selectObject]);
 
-  // ---- Source probe (runs even when layer off) -------------------
   const sourceProbeQuery = useQuery({
     queryKey: ['aviation', 'opensky', 'source-probe'],
     queryFn: async (): Promise<OpenSkyAPIResponse> => {
@@ -227,6 +226,7 @@ export function useAircraftLayer() {
     retry: 1,
     placeholderData: (prev) => prev,
     refetchOnWindowFocus: false,
+    enabled: aircraftVisible,
   });
 
   // ---- Main data query (only when visible) -----------------------

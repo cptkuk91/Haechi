@@ -7,7 +7,7 @@ const REQUIRED_LAYER_IDS = {
   disaster: ['disaster-wildfire-points', 'disaster-earthquake-ripple'],
   infra: ['infra-grid-nodes'],
   crime: ['crime-risk-heatmap'],
-  health: ['health-ambulance-route', 'health-er-capacity'],
+  health: [],
   vulnerable: ['vulnerable-amber-radius', 'vulnerable-emergency-iot'],
 };
 
@@ -60,7 +60,6 @@ async function runSourceMode() {
   const trafficFlowSource = await loadText('hooks/useTrafficFlowLayer.ts');
   const weatherSource = await loadText('hooks/useWeatherLayer.ts');
   const disasterSource = await loadText('hooks/useDisasterLayer.ts');
-  const healthSource = await loadText('hooks/useHealthLayer.ts');
   const vulnerableSource = await loadText('hooks/useVulnerableLayer.ts');
   const selectedBindingSource = await loadText('hooks/useSelectedObjectBinding.ts');
 
@@ -107,13 +106,6 @@ async function runSourceMode() {
         appPageSource.includes('useDisasterLayer();') &&
         disasterSource.includes("disaster-wildfire-points") &&
         disasterSource.includes("disaster-earthquake-ripple"),
-    },
-    {
-      check: 'health-hook-mounted',
-      ok:
-        appPageSource.includes('useHealthLayer();') &&
-        healthSource.includes("health-ambulance-track") &&
-        healthSource.includes("health-er-capacity"),
     },
     {
       check: 'vulnerable-hook-mounted',
