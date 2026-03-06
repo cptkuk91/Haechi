@@ -169,6 +169,40 @@ export function useDomainLayers() {
             })
           ),
       },
+      {
+        id: 'vulnerable-child-welfare-facilities',
+        domain: 'vulnerable',
+        name: '아동복지시설',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#ec4899', radius: 500, opacity: 0.9 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'vulnerable-child-welfare-facilities',
+              domain: 'vulnerable',
+              type: 'marker',
+            })
+          ),
+      },
+      {
+        id: 'vulnerable-disabled-facilities',
+        domain: 'vulnerable',
+        name: '장애인 편의시설',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#ec4899', radius: 500, opacity: 0.9 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'vulnerable-disabled-facilities',
+              domain: 'vulnerable',
+              type: 'marker',
+            })
+          ),
+      },
     ];
 
     layers.forEach((layer) => addLayer(layer));

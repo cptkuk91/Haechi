@@ -24,7 +24,7 @@ function pickFirstString(properties: Record<string, unknown>, keys: string[]): s
   return null;
 }
 
-function isElderlyWelfareSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+function isSocialWelfareFacilitySelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
   if (selectedObject.domain !== 'vulnerable') return false;
   const properties = selectedObject.properties;
   return (
@@ -34,7 +34,7 @@ function isElderlyWelfareSelection(selectedObject: { domain: string; properties:
   );
 }
 
-function buildElderlyWelfareEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
   const name = pickFirstString(properties, ['name', 'fac_nam']);
   const facilityType = pickFirstString(properties, ['facilityType', 'category', 'cat_nam']);
   const phone = pickFirstString(properties, ['phone', 'fac_tel']);
@@ -69,8 +69,8 @@ export default function StatusPanel() {
 
   const selectedEntries = useMemo(() => {
     if (!selectedObject) return [];
-    if (isElderlyWelfareSelection(selectedObject)) {
-      return buildElderlyWelfareEntries(selectedObject.properties);
+    if (isSocialWelfareFacilitySelection(selectedObject)) {
+      return buildSocialWelfareFacilityEntries(selectedObject.properties);
     }
     return Object.entries(selectedObject.properties).slice(0, 8);
   }, [selectedObject]);

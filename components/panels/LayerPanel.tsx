@@ -219,6 +219,10 @@ export default function LayerPanel() {
                                       ? '실종 발생 위치 (완료)'
                                     : layer.id === 'vulnerable-elderly-welfare-facilities' && layerDataSource[layer.id] === 'upstream'
                                       ? '노인복지시설 (완료)'
+                                    : layer.id === 'vulnerable-child-welfare-facilities' && layerDataSource[layer.id] === 'upstream'
+                                      ? '아동복지시설 (완료)'
+                                    : layer.id === 'vulnerable-disabled-facilities' && layerDataSource[layer.id] === 'upstream'
+                                      ? '장애인 편의시설 (완료)'
                                     : undefined
                                 }
                                 onToggle={() => toggleLayer(layer.id)}

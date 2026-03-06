@@ -19,6 +19,8 @@ import { useHealthEmergencyRoomsLayer } from '@/hooks/useHealthEmergencyRoomsLay
 import { useMissingPersonsLayer } from '@/hooks/useMissingPersonsLayer';
 import { useWildfireLayer } from '@/hooks/useWildfireLayer';
 import { useElderlyWelfareFacilitiesLayer } from '@/hooks/useElderlyWelfareFacilitiesLayer';
+import { useChildWelfareFacilitiesLayer } from '@/hooks/useChildWelfareFacilitiesLayer';
+import { useDisabledFacilitiesLayer } from '@/hooks/useDisabledFacilitiesLayer';
 
 export default function LayerBootstrap() {
   useDomainLayers();
@@ -40,6 +42,8 @@ export default function LayerBootstrap() {
   useHealthEmergencyRoomsLayer();
   useMissingPersonsLayer();
   useElderlyWelfareFacilitiesLayer();
+  useChildWelfareFacilitiesLayer();
+  useDisabledFacilitiesLayer();
 
   return null;
 }

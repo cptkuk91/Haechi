@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
 import type { Collection, Document } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
+import { clampInt, compactText, toPositiveInt } from '@/app/api/_shared/parse-primitives';
 
 const SAFE182_URL = 'https://www.safe182.go.kr/api/lcm/amberList.do';
-const ROW_SIZE = 100;
-const CACHE_TTL_MS = 6 * 60 * 60_000; // 6시간
+const DEFAULT_COLLECTION_NAME = 'vulnerable_missing_locations';
+const DEFAULT_ROW_SIZE = 100;
+const MIN_ROW_SIZE = 1;
+const MAX_ROW_SIZE = 500;
+const DEFAULT_MAX_PAGES = 200;
+const MIN_MAX_PAGES = 1;
+const MAX_MAX_PAGES = 1000;
+const DEFAULT_MAX_FEATURES = 5000;
+const MIN_MAX_FEATURES = 1;
+const MAX_MAX_FEATURES = 20_000;
+const DEFAULT_SYNC_TTL_MINUTES = 360;
+const MIN_SYNC_TTL_MINUTES = 10;
+const MAX_SYNC_TTL_MINUTES = 1440;
 
 interface Safe182Item {
   occrAdres?: string;
@@ -20,25 +32,60 @@ interface DongCoordinate {
   fullAddress: string;
   sidoName: string;
   sigunguName: string;
-  dongName: string;
   lat: number | null;
   lng: number | null;
 }
 
-interface CachedResult {
-  json: Record<string, unknown>;
-  source: string;
-  cachedAt: number;
+interface MissingLocationDocument extends Document {
+  locationKey: string;
+  address: string;
+  location: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
+  count: number;
+  weight: number;
+  syncedAt: Date;
+  updatedAt: Date;
 }
 
-// ── 인메모리 캐시 ──────────────────────────────────────────────────
-let cache: CachedResult | null = null;
-
-function emptyFeatureCollection(): GeoJSON.FeatureCollection {
-  return { type: 'FeatureCollection', features: [] };
+interface MissingLocationMetaDocument extends Document {
+  _id: 'current';
+  totalCount: number;
+  matchedCount: number;
+  unparsedCount: number;
+  unmatchedCount: number;
+  warnings: string[];
+  syncedAt: Date;
+  updatedAt: Date;
 }
 
-/** 시도 약칭 → 정식명칭 맵 */
+interface Bbox {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
+interface SyncSummary {
+  source: 'mock' | 'upstream';
+  storedCount: number;
+  totalCount: number;
+  matchedCount: number;
+  syncedAt: Date | null;
+  warnings: string[];
+}
+
+interface QuerySummary {
+  source: 'mock' | 'upstream';
+  storedCount: number;
+  totalCount: number;
+  matchedCount: number;
+  syncedAt: string | null;
+  warnings: string[];
+  features: GeoJSON.Feature<GeoJSON.Point>[];
+}
+
 const SIDO_ALIAS: Record<string, string> = {
   서울: '서울특별시',
   부산: '부산광역시',
@@ -56,35 +103,71 @@ const SIDO_ALIAS: Record<string, string> = {
   경북: '경상북도',
   경남: '경상남도',
   제주: '제주특별자치도',
-  // 과거·약칭 → 현행 명칭
   강원도: '강원특별자치도',
   전라북도: '전북특별자치도',
   전북: '전북특별자치도',
-  // 시 단독 사용 (시도 없이 시부터 시작하는 경우)
   광주시: '광주광역시',
   안산: '경기도',
 };
 
-/** 폐지된 시군구 → 현행 시군구 매핑 */
 const SIGUNGU_ALIAS: Record<string, { sido: string; sigungu: string }> = {
   '경상남도 진해시': { sido: '경상남도', sigungu: '창원시 진해구' },
   '경상북도 군위군': { sido: '대구광역시', sigungu: '군위군' },
 };
 
+let ensureIndexesPromise: Promise<void> | null = null;
+let syncInFlight: Promise<SyncSummary> | null = null;
+
+function emptyFeatureCollection(): GeoJSON.FeatureCollection {
+  return { type: 'FeatureCollection', features: [] };
+}
+
+function parseBboxQueryParam(raw: string | null): Bbox | null {
+  if (!raw) return null;
+
+  const [westRaw, southRaw, eastRaw, northRaw] = raw.split(',');
+  if (!westRaw || !southRaw || !eastRaw || !northRaw) return null;
+
+  const west = Number(westRaw);
+  const south = Number(southRaw);
+  const east = Number(eastRaw);
+  const north = Number(northRaw);
+
+  if (![west, south, east, north].every(Number.isFinite)) return null;
+  if (west >= east || south >= north) return null;
+  if (west < -180 || east > 180 || south < -90 || north > 90) return null;
+
+  return { west, south, east, north };
+}
+
+function toDate(value: unknown): Date | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return null;
+}
+
+function uniqueWarnings(warnings: string[]): string[] {
+  const filtered = warnings
+    .map((warning) => compactText(warning))
+    .filter(Boolean);
+  return [...new Set(filtered)];
+}
+
 function parseAddress(raw: string): { sido: string; sigungu: string; dong: string | null } | null {
-  const trimmed = raw.trim();
+  const trimmed = compactText(raw);
   if (!trimmed) return null;
 
   const parts = trimmed.split(/\s+/);
   if (parts.length < 2) return null;
 
-  let sido = parts[0];
-  sido = SIDO_ALIAS[sido] ?? sido;
-
+  const sido = SIDO_ALIAS[parts[0]] ?? parts[0];
   const sigungu = parts[1];
 
   const dongSuffixes = /[동읍면가리]$/;
-  for (let i = 2; i < parts.length; i++) {
+  for (let i = 2; i < parts.length; i += 1) {
     if (dongSuffixes.test(parts[i])) {
       return { sido, sigungu, dong: parts[i] };
     }
@@ -93,44 +176,77 @@ function parseAddress(raw: string): { sido: string; sigungu: string; dong: strin
   return { sido, sigungu, dong: null };
 }
 
-async function fetchAllPages(esntlId: string, authKey: string): Promise<Safe182Item[]> {
+async function fetchSafe182Page(args: {
+  esntlId: string;
+  authKey: string;
+  rowSize: number;
+  page: number;
+}): Promise<Safe182Response> {
+  const body = new URLSearchParams({
+    esntlId: args.esntlId,
+    authKey: args.authKey,
+    rowSize: String(args.rowSize),
+    page: String(args.page),
+  });
+
+  const res = await fetch(SAFE182_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    throw new Error(`safe182 API responded ${res.status}`);
+  }
+
+  return (await res.json()) as Safe182Response;
+}
+
+async function fetchAllPages(args: {
+  esntlId: string;
+  authKey: string;
+  rowSize: number;
+  maxPages: number;
+}): Promise<{ items: Safe182Item[]; totalCount: number; warnings: string[] }> {
+  const warnings: string[] = [];
   const allItems: Safe182Item[] = [];
-  let page = 1;
+
   let totalCount = 0;
 
-  do {
-    const body = new URLSearchParams({
-      esntlId,
-      authKey,
-      rowSize: String(ROW_SIZE),
-      page: String(page),
+  for (let page = 1; page <= args.maxPages; page += 1) {
+    const json = await fetchSafe182Page({
+      esntlId: args.esntlId,
+      authKey: args.authKey,
+      rowSize: args.rowSize,
+      page,
     });
-
-    const res = await fetch(SAFE182_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
-      cache: 'no-store',
-    });
-
-    if (!res.ok) {
-      throw new Error(`safe182 API responded ${res.status}`);
-    }
-
-    const json = (await res.json()) as Safe182Response;
 
     if (page === 1) {
       totalCount = typeof json.totalCount === 'number' ? json.totalCount : 0;
     }
 
-    if (Array.isArray(json.list)) {
-      allItems.push(...json.list);
+    const list = Array.isArray(json.list) ? json.list : [];
+    allItems.push(...list);
+
+    if (totalCount > 0 && allItems.length >= totalCount) {
+      break;
     }
 
-    page += 1;
-  } while (allItems.length < totalCount);
+    if (list.length < args.rowSize) {
+      break;
+    }
+  }
 
-  return allItems;
+  if (totalCount > allItems.length) {
+    warnings.push(`safe182 max pages reached: ${allItems.length}/${totalCount} rows loaded`);
+  }
+
+  return {
+    items: allItems,
+    totalCount: totalCount > 0 ? totalCount : allItems.length,
+    warnings,
+  };
 }
 
 async function fetchSourceProbe(esntlId: string, authKey: string): Promise<{ totalCount: number }> {
@@ -189,23 +305,68 @@ async function buildCoordMaps(collection: Collection<Document>) {
   return { exactMap, sigunguMap };
 }
 
-async function buildResult(esntlId: string, authKey: string): Promise<{ json: Record<string, unknown>; source: string }> {
+async function ensureIndexes(
+  collection: Collection<MissingLocationDocument>,
+  metaCollection: Collection<MissingLocationMetaDocument>
+): Promise<void> {
+  if (!ensureIndexesPromise) {
+    ensureIndexesPromise = (async () => {
+      await collection.createIndex({ locationKey: 1 }, { unique: true });
+      await collection.createIndex({ location: '2dsphere' });
+      await collection.createIndex({ syncedAt: -1 });
+      await metaCollection.createIndex({ syncedAt: -1 });
+    })().catch((error) => {
+      ensureIndexesPromise = null;
+      throw error;
+    });
+  }
+
+  await ensureIndexesPromise;
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  if (items.length === 0) return [];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+async function synchronizeMissingLocations(args: {
+  esntlId: string;
+  authKey: string;
+  rowSize: number;
+  maxPages: number;
+  collection: Collection<MissingLocationDocument>;
+  metaCollection: Collection<MissingLocationMetaDocument>;
+  dongCollection: Collection<Document>;
+}): Promise<SyncSummary> {
   const warnings: string[] = [];
 
-  const items = await fetchAllPages(esntlId, authKey);
+  const fetched = await fetchAllPages({
+    esntlId: args.esntlId,
+    authKey: args.authKey,
+    rowSize: args.rowSize,
+    maxPages: args.maxPages,
+  });
 
-  const client = await clientPromise;
-  const collection = client.db('haechi').collection('dong_coordinates');
-  const { exactMap, sigunguMap } = await buildCoordMaps(collection);
+  warnings.push(...fetched.warnings);
+
+  const { exactMap, sigunguMap } = await buildCoordMaps(args.dongCollection);
 
   const locationCounts = new Map<string, { lat: number; lng: number; count: number; address: string }>();
   let unparsedCount = 0;
   let unmatchedCount = 0;
 
-  for (const item of items) {
+  for (const item of fetched.items) {
     const addr = typeof item.occrAdres === 'string' ? item.occrAdres : '';
     const parsed = parseAddress(addr);
-    if (!parsed) { unparsedCount++; continue; }
+
+    if (!parsed) {
+      unparsedCount += 1;
+      continue;
+    }
 
     let coord: { lat: number; lng: number } | undefined;
     let locationKey = '';
@@ -238,43 +399,187 @@ async function buildResult(esntlId: string, authKey: string): Promise<{ json: Re
       }
     }
 
-    if (!coord) { unmatchedCount++; continue; }
+    if (!coord) {
+      unmatchedCount += 1;
+      continue;
+    }
 
     const existing = locationCounts.get(locationKey);
     if (existing) {
-      existing.count++;
+      existing.count += 1;
     } else {
-      locationCounts.set(locationKey, { ...coord, count: 1, address: locationKey });
+      locationCounts.set(locationKey, {
+        ...coord,
+        count: 1,
+        address: locationKey,
+      });
     }
   }
 
-  if (unparsedCount > 0) warnings.push(`${unparsedCount}건의 주소를 파싱할 수 없습니다`);
-  if (unmatchedCount > 0) warnings.push(`${unmatchedCount}건의 주소를 좌표에 매칭할 수 없습니다`);
+  if (unparsedCount > 0) {
+    warnings.push(`${unparsedCount}건의 주소를 파싱할 수 없습니다`);
+  }
+  if (unmatchedCount > 0) {
+    warnings.push(`${unmatchedCount}건의 주소를 좌표에 매칭할 수 없습니다`);
+  }
 
-  const features: GeoJSON.Feature[] = [];
-  let matchedCount = 0;
+  const syncedAt = new Date();
+  const docs: MissingLocationDocument[] = [];
 
-  for (const [, loc] of locationCounts) {
-    matchedCount += loc.count;
-    features.push({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [loc.lng, loc.lat] },
-      properties: { address: loc.address, count: loc.count, weight: Math.min(loc.count / 3, 1) },
+  for (const [locationKey, loc] of locationCounts) {
+    docs.push({
+      locationKey,
+      address: loc.address,
+      location: {
+        type: 'Point',
+        coordinates: [loc.lng, loc.lat],
+      },
+      count: loc.count,
+      weight: Math.min(loc.count / 3, 1),
+      syncedAt,
+      updatedAt: syncedAt,
     });
   }
 
-  const source = features.length > 0 ? 'upstream' : 'mock';
+  const operations = docs.map((doc) => ({
+    updateOne: {
+      filter: { locationKey: doc.locationKey },
+      update: { $set: doc },
+      upsert: true,
+    },
+  }));
+
+  for (const chunk of chunkArray(operations, 1000)) {
+    if (chunk.length > 0) {
+      await args.collection.bulkWrite(chunk, { ordered: false });
+    }
+  }
+
+  if (docs.length === 0) {
+    await args.collection.deleteMany({});
+  } else {
+    const keys = docs.map((doc) => doc.locationKey);
+    await args.collection.deleteMany({ locationKey: { $nin: keys } });
+  }
+
+  const matchedCount = docs.reduce((sum, doc) => sum + doc.count, 0);
+  const dedupedWarnings = uniqueWarnings(warnings);
+
+  await args.metaCollection.updateOne(
+    { _id: 'current' },
+    {
+      $set: {
+        totalCount: fetched.totalCount,
+        matchedCount,
+        unparsedCount,
+        unmatchedCount,
+        warnings: dedupedWarnings,
+        syncedAt,
+        updatedAt: syncedAt,
+      },
+    },
+    { upsert: true }
+  );
 
   return {
-    source,
-    json: {
-      source,
-      updatedAt: new Date().toISOString(),
-      data: { type: 'FeatureCollection', features } satisfies GeoJSON.FeatureCollection,
-      totalCount: items.length,
-      matchedCount,
-      warnings,
-    },
+    source: docs.length > 0 ? 'upstream' : 'mock',
+    storedCount: docs.length,
+    totalCount: fetched.totalCount,
+    matchedCount,
+    syncedAt,
+    warnings: dedupedWarnings,
+  };
+}
+
+async function runSyncWithLock(args: {
+  esntlId: string;
+  authKey: string;
+  rowSize: number;
+  maxPages: number;
+  collection: Collection<MissingLocationDocument>;
+  metaCollection: Collection<MissingLocationMetaDocument>;
+  dongCollection: Collection<Document>;
+}): Promise<SyncSummary> {
+  if (!syncInFlight) {
+    syncInFlight = synchronizeMissingLocations(args).finally(() => {
+      syncInFlight = null;
+    });
+  }
+
+  return syncInFlight;
+}
+
+async function queryMissingLocations(args: {
+  collection: Collection<MissingLocationDocument>;
+  metaCollection: Collection<MissingLocationMetaDocument>;
+  maxFeatures: number;
+  bbox: Bbox | null;
+}): Promise<QuerySummary> {
+  const filter: Document = {};
+
+  if (args.bbox) {
+    filter.location = {
+      $geoWithin: {
+        $box: [
+          [args.bbox.west, args.bbox.south],
+          [args.bbox.east, args.bbox.north],
+        ],
+      },
+    };
+  }
+
+  const [storedCount, meta, docs] = await Promise.all([
+    args.collection.estimatedDocumentCount(),
+    args.metaCollection.findOne({ _id: 'current' }),
+    args.collection
+      .find(filter)
+      .sort({ count: -1 })
+      .limit(args.maxFeatures)
+      .toArray(),
+  ]);
+
+  const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
+
+  for (let index = 0; index < docs.length; index += 1) {
+    const doc = docs[index];
+    const coordinates = doc.location?.coordinates;
+    if (!Array.isArray(coordinates) || coordinates.length < 2) continue;
+
+    const lng = Number(coordinates[0]);
+    const lat = Number(coordinates[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+    features.push({
+      type: 'Feature',
+      id: `missing-location-${index + 1}`,
+      geometry: {
+        type: 'Point',
+        coordinates: [lng, lat],
+      },
+      properties: {
+        address: doc.address,
+        count: doc.count,
+        weight: doc.weight,
+      },
+    });
+  }
+
+  const fallbackMatchedCount = docs.reduce((sum, doc) => sum + (Number.isFinite(doc.count) ? doc.count : 0), 0);
+  const metaTotalCount = typeof meta?.totalCount === 'number' ? meta.totalCount : fallbackMatchedCount;
+  const metaMatchedCount = typeof meta?.matchedCount === 'number' ? meta.matchedCount : fallbackMatchedCount;
+  const syncedAt = toDate(meta?.syncedAt);
+  const warnings = Array.isArray(meta?.warnings)
+    ? meta.warnings.filter((warning): warning is string => typeof warning === 'string' && Boolean(warning.trim()))
+    : [];
+
+  return {
+    source: storedCount > 0 ? 'upstream' : 'mock',
+    storedCount,
+    totalCount: metaTotalCount,
+    matchedCount: metaMatchedCount,
+    syncedAt: syncedAt ? syncedAt.toISOString() : null,
+    warnings,
+    features,
   };
 }
 
@@ -282,56 +587,108 @@ export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
   const sourceOnlyRaw = (searchParams.get('sourceOnly') ?? '').trim().toLowerCase();
   const sourceOnly = sourceOnlyRaw === '1' || sourceOnlyRaw === 'true' || sourceOnlyRaw === 'yes';
+  const refreshRaw = (searchParams.get('refresh') ?? '').trim().toLowerCase();
+  const refresh = refreshRaw === '1' || refreshRaw === 'true' || refreshRaw === 'yes';
 
   const esntlId = process.env.TEAM2_SAFE182_ESNTL_ID;
   const authKey = process.env.TEAM2_SAFE182_AUTH_KEY;
+  const collectionName = compactText(process.env.TEAM2_MISSING_LOCATIONS_COLLECTION ?? DEFAULT_COLLECTION_NAME)
+    || DEFAULT_COLLECTION_NAME;
 
-  if (!esntlId || !authKey) {
-    return NextResponse.json(
-      {
-        source: 'mock',
-        updatedAt: new Date().toISOString(),
-        data: emptyFeatureCollection(),
-        totalCount: 0,
-        matchedCount: 0,
-        warnings: ['Missing env: TEAM2_SAFE182_ESNTL_ID or TEAM2_SAFE182_AUTH_KEY'],
-      },
-      { headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': 'mock' } }
-    );
-  }
+  const rowSize = clampInt(
+    toPositiveInt(process.env.TEAM2_MISSING_LOCATIONS_ROW_SIZE, DEFAULT_ROW_SIZE),
+    MIN_ROW_SIZE,
+    MAX_ROW_SIZE
+  );
+  const maxPages = clampInt(
+    toPositiveInt(process.env.TEAM2_MISSING_LOCATIONS_MAX_PAGES, DEFAULT_MAX_PAGES),
+    MIN_MAX_PAGES,
+    MAX_MAX_PAGES
+  );
+  const defaultMaxFeatures = clampInt(
+    toPositiveInt(process.env.TEAM2_MISSING_LOCATIONS_MAX_FEATURES, DEFAULT_MAX_FEATURES),
+    MIN_MAX_FEATURES,
+    MAX_MAX_FEATURES
+  );
+  const maxFeatures = clampInt(
+    toPositiveInt(searchParams.get('max'), defaultMaxFeatures),
+    MIN_MAX_FEATURES,
+    MAX_MAX_FEATURES
+  );
+  const syncTtlMinutes = clampInt(
+    toPositiveInt(process.env.TEAM2_MISSING_LOCATIONS_SYNC_TTL_MINUTES, DEFAULT_SYNC_TTL_MINUTES),
+    MIN_SYNC_TTL_MINUTES,
+    MAX_SYNC_TTL_MINUTES
+  );
+  const syncTtlMs = syncTtlMinutes * 60_000;
+
+  const bbox = parseBboxQueryParam(searchParams.get('bbox'));
+
+  const client = await clientPromise;
+  const db = client.db('haechi');
+  const collection = db.collection<MissingLocationDocument>(collectionName);
+  const metaCollection = db.collection<MissingLocationMetaDocument>(`${collectionName}_meta`);
+  const dongCollection = db.collection<Document>('dong_coordinates');
+
+  await ensureIndexes(collection, metaCollection);
 
   if (sourceOnly) {
+    const [storedCount, meta] = await Promise.all([
+      collection.estimatedDocumentCount(),
+      metaCollection.findOne({ _id: 'current' }),
+    ]);
+
+    if (storedCount > 0) {
+      return NextResponse.json(
+        {
+          source: 'upstream',
+          updatedAt: new Date().toISOString(),
+          syncedAt: toDate(meta?.syncedAt)?.toISOString() ?? null,
+          totalCount: typeof meta?.totalCount === 'number' ? meta.totalCount : storedCount,
+          matchedCount: typeof meta?.matchedCount === 'number' ? meta.matchedCount : storedCount,
+          storedCount,
+          warnings: [],
+        },
+        { headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': 'upstream' } }
+      );
+    }
+
+    if (!esntlId || !authKey) {
+      return NextResponse.json(
+        {
+          source: 'mock',
+          updatedAt: new Date().toISOString(),
+          storedCount: 0,
+          totalCount: 0,
+          matchedCount: 0,
+          warnings: ['Missing env: TEAM2_SAFE182_ESNTL_ID or TEAM2_SAFE182_AUTH_KEY'],
+        },
+        { headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': 'mock' } }
+      );
+    }
+
     try {
       const probe = await fetchSourceProbe(esntlId, authKey);
       return NextResponse.json(
         {
           source: 'upstream',
           updatedAt: new Date().toISOString(),
+          storedCount: 0,
           totalCount: probe.totalCount,
+          matchedCount: 0,
           warnings: [],
         },
         { headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': 'upstream' } }
       );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-
-      if (cache) {
-        return NextResponse.json(
-          {
-            source: cache.source,
-            updatedAt: new Date().toISOString(),
-            totalCount: typeof cache.json.totalCount === 'number' ? cache.json.totalCount : 0,
-            warnings: [`safe182 source probe failed: ${message}`],
-          },
-          { headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': cache.source } }
-        );
-      }
-
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       return NextResponse.json(
         {
           source: 'mock',
           updatedAt: new Date().toISOString(),
+          storedCount: 0,
           totalCount: 0,
+          matchedCount: 0,
           warnings: [`safe182 source probe failed: ${message}`],
         },
         { headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': 'mock' } }
@@ -339,41 +696,85 @@ export async function GET(request: Request) {
     }
   }
 
-  // 캐시 히트 → 즉시 반환
-  if (cache && Date.now() - cache.cachedAt < CACHE_TTL_MS) {
-    return NextResponse.json(cache.json, {
-      headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': cache.source },
-    });
+  const runtimeWarnings: string[] = [];
+
+  const [storedCountBefore, metaBefore] = await Promise.all([
+    collection.estimatedDocumentCount(),
+    metaCollection.findOne({ _id: 'current' }),
+  ]);
+
+  const lastSyncedAt = toDate(metaBefore?.syncedAt);
+  const shouldSync =
+    refresh
+    || storedCountBefore === 0
+    || !lastSyncedAt
+    || (Date.now() - lastSyncedAt.getTime() > syncTtlMs);
+
+  if (shouldSync) {
+    if (esntlId && authKey) {
+      try {
+        const syncResult = await runSyncWithLock({
+          esntlId,
+          authKey,
+          rowSize,
+          maxPages,
+          collection,
+          metaCollection,
+          dongCollection,
+        });
+        runtimeWarnings.push(...syncResult.warnings);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        runtimeWarnings.push(`safe182 sync failed: ${message}`);
+      }
+    } else {
+      runtimeWarnings.push('Missing env: TEAM2_SAFE182_ESNTL_ID or TEAM2_SAFE182_AUTH_KEY');
+    }
   }
 
-  try {
-    const result = await buildResult(esntlId, authKey);
+  const querySummary = await queryMissingLocations({
+    collection,
+    metaCollection,
+    maxFeatures,
+    bbox,
+  });
 
-    // 캐시 저장
-    cache = { json: result.json, source: result.source, cachedAt: Date.now() };
+  const warnings = uniqueWarnings([...querySummary.warnings, ...runtimeWarnings]);
 
-    return NextResponse.json(result.json, {
-      headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': result.source },
-    });
-  } catch (err) {
-    // 에러 시 기존 캐시가 있으면 stale 캐시 반환
-    if (cache) {
-      return NextResponse.json(cache.json, {
-        headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': cache.source },
-      });
-    }
+  if (querySummary.source === 'mock' && !esntlId && !authKey && warnings.length === 0) {
+    warnings.push('Missing env: TEAM2_SAFE182_ESNTL_ID or TEAM2_SAFE182_AUTH_KEY');
+  }
 
-    const message = err instanceof Error ? err.message : String(err);
+  if (querySummary.source === 'mock') {
     return NextResponse.json(
       {
         source: 'mock',
         updatedAt: new Date().toISOString(),
+        syncedAt: querySummary.syncedAt,
         data: emptyFeatureCollection(),
-        totalCount: 0,
-        matchedCount: 0,
-        warnings: [`safe182 fetch failed: ${message}`],
+        totalCount: querySummary.totalCount,
+        matchedCount: querySummary.matchedCount,
+        storedCount: querySummary.storedCount,
+        warnings,
       },
       { headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': 'mock' } }
     );
   }
+
+  return NextResponse.json(
+    {
+      source: 'upstream',
+      updatedAt: new Date().toISOString(),
+      syncedAt: querySummary.syncedAt,
+      data: {
+        type: 'FeatureCollection',
+        features: querySummary.features,
+      } satisfies GeoJSON.FeatureCollection,
+      totalCount: querySummary.totalCount,
+      matchedCount: querySummary.matchedCount,
+      storedCount: querySummary.storedCount,
+      warnings,
+    },
+    { headers: { 'cache-control': 'no-store, max-age=0', 'x-team2-source': 'upstream' } }
+  );
 }
