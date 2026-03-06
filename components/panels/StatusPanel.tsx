@@ -37,15 +37,26 @@ function isSocialWelfareFacilitySelection(selectedObject: { domain: string; prop
 function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
   const name = pickFirstString(properties, ['name', 'fac_nam']);
   const facilityType = pickFirstString(properties, ['facilityType', 'category', 'cat_nam']);
-  const phone = pickFirstString(properties, ['phone', 'fac_tel']);
+  const phone = pickFirstString(properties, ['phone', 'fac_tel', 'rprsTelno']);
+  const consultPhone = pickFirstString(properties, ['consultPhone', 'dscsnTelno']);
+  const managerName = pickFirstString(properties, ['managerName', 'cnterChNm']);
+  const homepage = pickFirstString(properties, ['homepage', 'hmpgAddr']);
+  const email = pickFirstString(properties, ['email', 'emlAddr']);
+  const languages = pickFirstString(properties, ['languages', 'pvsnLngNm']);
+  const operHours = pickFirstString(properties, ['operHours', 'operHrCn']);
+  const operAgency = pickFirstString(properties, ['operAgency', 'operMbyCn']);
+  const operMode = pickFirstString(properties, ['operMode', 'operModeCn']);
+  const fax = pickFirstString(properties, ['fax', 'fxno']);
+  const remarks = pickFirstString(properties, ['remarks', 'rmrkCn']);
   const roadAddress = pickFirstString(properties, ['roadAddress', 'fac_n_add']);
   const oldAddress = pickFirstString(properties, ['oldAddress', 'fac_o_add']);
   const address = pickFirstString(properties, ['address']);
+  const employeeCount = properties.employeeCount;
 
   const entries: Array<[string, unknown]> = [
     ['시설명', name ?? '-'],
     ['시설유형', facilityType ?? '-'],
-    ['전화번호', phone ?? '-'],
+    ['대표전화', phone ?? '-'],
   ];
 
   if (roadAddress || address) {
@@ -53,6 +64,39 @@ function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>):
   }
   if (oldAddress) {
     entries.push(['지번주소', oldAddress]);
+  }
+  if (consultPhone) {
+    entries.push(['상담전화', consultPhone]);
+  }
+  if (managerName) {
+    entries.push(['센터장명', managerName]);
+  }
+  if (languages) {
+    entries.push(['제공언어', languages]);
+  }
+  if (operHours) {
+    entries.push(['운영시간', operHours]);
+  }
+  if (operAgency) {
+    entries.push(['설립주체', operAgency]);
+  }
+  if (operMode) {
+    entries.push(['운영형태', operMode]);
+  }
+  if (typeof employeeCount === 'number') {
+    entries.push(['직원수', employeeCount]);
+  }
+  if (homepage) {
+    entries.push(['홈페이지', homepage]);
+  }
+  if (email) {
+    entries.push(['이메일', email]);
+  }
+  if (fax) {
+    entries.push(['팩스번호', fax]);
+  }
+  if (remarks) {
+    entries.push(['비고', remarks]);
   }
 
   return entries;

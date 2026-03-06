@@ -203,6 +203,23 @@ export function useDomainLayers() {
             })
           ),
       },
+      {
+        id: 'vulnerable-multicultural-support-centers',
+        domain: 'vulnerable',
+        name: '다문화가족지원센터',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#ec4899', radius: 500, opacity: 0.9 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'vulnerable-multicultural-support-centers',
+              domain: 'vulnerable',
+              type: 'marker',
+            })
+          ),
+      },
     ];
 
     layers.forEach((layer) => addLayer(layer));

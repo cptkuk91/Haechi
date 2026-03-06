@@ -22,6 +22,7 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'vulnerable-elderly-welfare-facilities',
   'vulnerable-child-welfare-facilities',
   'vulnerable-disabled-facilities',
+  'vulnerable-multicultural-support-centers',
 ]);
 
 export default function Team2LayerBootstrap() {

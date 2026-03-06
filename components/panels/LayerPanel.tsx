@@ -223,6 +223,8 @@ export default function LayerPanel() {
                                       ? '아동복지시설 (완료)'
                                     : layer.id === 'vulnerable-disabled-facilities' && layerDataSource[layer.id] === 'upstream'
                                       ? '장애인 편의시설 (완료)'
+                                    : layer.id === 'vulnerable-multicultural-support-centers' && layerDataSource[layer.id] === 'upstream'
+                                      ? '다문화가족지원센터 (완료)'
                                     : undefined
                                 }
                                 onToggle={() => toggleLayer(layer.id)}
