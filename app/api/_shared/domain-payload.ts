@@ -406,56 +406,9 @@ export function buildDomainPayload(domain: Team2DomainRoute): DomainPayload {
       return {
         domain,
         updatedAt,
-        layers: [
-          {
-            id: 'infra-grid-nodes',
-            domain: 'infra',
-            name: '전력망 노드',
-            type: 'marker',
-            visible: true,
-            style: { color: '#f97316', radius: 700 },
-            data: featureCollection([
-              point('grid-seoul', [127.087, 37.506], { loadPct: 74, type: 'substation' }),
-              point('grid-ulsan', [129.228, 35.512], { loadPct: 89, type: 'plant' }),
-              point('grid-gwangju', [126.888, 35.169], { loadPct: 66, type: 'substation' }),
-            ]),
-          },
-          {
-            id: 'infra-radiation-zone',
-            domain: 'infra',
-            name: '원전 감시권',
-            type: 'polygon',
-            visible: false,
-            style: { color: '#f97316', opacity: 0.18, elevation: 600 },
-            data: featureCollection([
-              polygon(
-                'npp-gyeongju',
-                [
-                  [129.33, 35.82],
-                  [129.49, 35.84],
-                  [129.47, 35.71],
-                  [129.31, 35.69],
-                ],
-                { rad: 0.12, unit: 'uSv/h' }
-              ),
-            ]),
-          },
-        ],
-        alerts: [
-          {
-            id: 'infra-load-warning',
-            domain: 'infra',
-            severity: 'warning',
-            title: '전력 부하 상승',
-            message: '울산 변전소 부하율 89% 도달. 수요 분산 권고.',
-            coordinates: [129.228, 35.512],
-          },
-        ],
-        metrics: [
-          { label: '부하율 상위 노드', value: '3', severity: 'warning' },
-          { label: '원전 감시소', value: '24' },
-          { label: '수자원 센서', value: '141' },
-        ],
+        layers: [],
+        alerts: [],
+        metrics: [],
       };
 
     case 'crime':

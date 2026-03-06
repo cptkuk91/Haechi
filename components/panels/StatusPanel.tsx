@@ -34,6 +34,16 @@ function isSocialWelfareFacilitySelection(selectedObject: { domain: string; prop
   );
 }
 
+function isPublicFacilitySafetySelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'infra') return false;
+  const properties = selectedObject.properties;
+  return (
+    typeof properties.facilityNo === 'string'
+    || typeof properties.safetyGrade === 'string'
+    || typeof properties.facilityKind === 'string'
+  );
+}
+
 function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
   const name = pickFirstString(properties, ['name', 'fac_nam']);
   const facilityType = pickFirstString(properties, ['facilityType', 'category', 'cat_nam']);
@@ -102,6 +112,55 @@ function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>):
   return entries;
 }
 
+function buildPublicFacilitySafetyEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name']);
+  const facilityNo = pickFirstString(properties, ['facilityNo']);
+  const facilityCategory = pickFirstString(properties, ['facilityCategory']);
+  const facilityKind = pickFirstString(properties, ['facilityKind']);
+  const safetyGrade = pickFirstString(properties, ['safetyGrade']);
+  const facilityClass = pickFirstString(properties, ['facilityClass']);
+  const address = pickFirstString(properties, ['address']);
+  const completionDate = pickFirstString(properties, ['completionDate', 'cplYmd']);
+  const nextInspectionDate = pickFirstString(properties, ['nextInspectionDate', 'nextPcchkArrvlYmd']);
+  const lastInspectionDate = pickFirstString(properties, ['lastInspectionDate', 'astChckDignYmd']);
+  const buildingNo = pickFirstString(properties, ['buildingNo']);
+
+  const entries: Array<[string, unknown]> = [
+    ['시설명', name ?? '-'],
+    ['안전등급', safetyGrade ?? '-'],
+  ];
+
+  if (facilityNo) {
+    entries.push(['시설물번호', facilityNo]);
+  }
+  if (facilityCategory) {
+    entries.push(['시설물구분', facilityCategory]);
+  }
+  if (facilityKind) {
+    entries.push(['시설물종류', facilityKind]);
+  }
+  if (facilityClass) {
+    entries.push(['시설물종별', facilityClass]);
+  }
+  if (address) {
+    entries.push(['주소', address]);
+  }
+  if (completionDate) {
+    entries.push(['준공일자', completionDate]);
+  }
+  if (nextInspectionDate) {
+    entries.push(['차기정밀점검도래일', nextInspectionDate]);
+  }
+  if (lastInspectionDate) {
+    entries.push(['최종점검진단일', lastInspectionDate]);
+  }
+  if (buildingNo) {
+    entries.push(['건축물번호', buildingNo]);
+  }
+
+  return entries;
+}
+
 export default function StatusPanel() {
   const selectedObject = useAppStore((s) => s.selectedObject);
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen);
@@ -113,6 +172,9 @@ export default function StatusPanel() {
 
   const selectedEntries = useMemo(() => {
     if (!selectedObject) return [];
+    if (isPublicFacilitySafetySelection(selectedObject)) {
+      return buildPublicFacilitySafetyEntries(selectedObject.properties);
+    }
     if (isSocialWelfareFacilitySelection(selectedObject)) {
       return buildSocialWelfareFacilityEntries(selectedObject.properties);
     }

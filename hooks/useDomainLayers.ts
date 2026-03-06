@@ -151,6 +151,25 @@ export function useDomainLayers() {
         style: { color: '#8b5cf6', radius: 350, opacity: 0.9 },
       },
 
+      // ── 국가 인프라 (실데이터 placeholder) ──
+      {
+        id: 'infra-public-facility-safety',
+        domain: 'infra',
+        name: '공공시설물 안전',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#f97316', radius: 550, opacity: 0.92 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'infra-public-facility-safety',
+              domain: 'infra',
+              type: 'marker',
+            })
+          ),
+      },
+
       // ── 사회적 약자 (신규 메뉴 placeholder) ──
       {
         id: 'vulnerable-elderly-welfare-facilities',

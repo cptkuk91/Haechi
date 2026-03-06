@@ -16,6 +16,11 @@ const HIDDEN_LAYER_IDS = new Set([
   'vulnerable-emergency-iot',
   'vulnerable-support-link',
 ]);
+const RESTRICTED_LAYER_IDS = new Set([
+  'cyber-attacks',
+]);
+const RESTRICTED_LAYER_ALERT_ID = 'alert-restricted-cyber-access';
+const RESTRICTED_LAYER_ALERT_MESSAGE = '인가 된 사용자만 확인 가능합니다.';
 
 export default function LayerPanel() {
   const {
@@ -30,6 +35,27 @@ export default function LayerPanel() {
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [cctvCustomInput, setCctvCustomInput] = useState(String(cctvMaxDisplayCount));
+
+  const showRestrictedLayerToast = () => {
+    useAppStore.setState((s) => ({
+      alerts: [
+        {
+          id: RESTRICTED_LAYER_ALERT_ID,
+          severity: 'info',
+          domain: 'cyber',
+          title: '사이버 안보 접근 제한',
+          message: RESTRICTED_LAYER_ALERT_MESSAGE,
+          timestamp: Date.now(),
+          dismissed: false,
+        },
+        ...s.alerts.filter((alert) => alert.id !== RESTRICTED_LAYER_ALERT_ID),
+      ].slice(0, 50),
+      toastAlertIds: [
+        RESTRICTED_LAYER_ALERT_ID,
+        ...s.toastAlertIds.filter((alertId) => alertId !== RESTRICTED_LAYER_ALERT_ID),
+      ].slice(0, 4),
+    }));
+  };
 
   useEffect(() => {
     setCctvCustomInput(String(cctvMaxDisplayCount));
@@ -62,6 +88,16 @@ export default function LayerPanel() {
       else next.add(domain);
       return next;
     });
+  };
+
+  const handleLayerToggle = (layerId: string) => {
+    const layer = layers[layerId];
+    if (!layer) return;
+    if (RESTRICTED_LAYER_IDS.has(layerId) && !layer.visible) {
+      showRestrictedLayerToast();
+      return;
+    }
+    toggleLayer(layerId);
   };
 
   // 도메인별 레이어 그룹핑
@@ -205,8 +241,12 @@ export default function LayerPanel() {
                                 key={layer.id}
                                 layer={layer}
                                 label={
-                                  layer.id === 'highway-incidents' && layerDataSource[layer.id] === 'upstream'
-                                    ? '서울 실시간 돌발정보 (완료)'
+                                  layer.id === 'cyber-attacks'
+                                    ? '사이버 공격 빔 (보류)'
+                                    : layer.id === 'infra-public-facility-safety' && layerDataSource[layer.id] === 'upstream'
+                                      ? '공공시설물 안전 (완료)'
+                                    : layer.id === 'highway-incidents' && layerDataSource[layer.id] === 'upstream'
+                                      ? '서울 실시간 돌발정보 (완료)'
                                     : layer.id === 'disaster-wildfire-points' && layerDataSource[layer.id] === 'upstream'
                                       ? '산불 발생 지점 (완료)'
                                     : layer.id === 'no-fly-zones' && layerDataSource[layer.id] === 'upstream'
@@ -227,7 +267,7 @@ export default function LayerPanel() {
                                       ? '다문화가족지원센터 (완료)'
                                     : undefined
                                 }
-                                onToggle={() => toggleLayer(layer.id)}
+                                onToggle={() => handleLayerToggle(layer.id)}
                               >
                                 {layer.id === 'traffic-cctv-markers' && layer.visible && (
                                   <div className="px-2 pb-2">

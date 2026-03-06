@@ -22,6 +22,7 @@ import { useElderlyWelfareFacilitiesLayer } from '@/hooks/useElderlyWelfareFacil
 import { useChildWelfareFacilitiesLayer } from '@/hooks/useChildWelfareFacilitiesLayer';
 import { useDisabledFacilitiesLayer } from '@/hooks/useDisabledFacilitiesLayer';
 import { useMulticulturalSupportCentersLayer } from '@/hooks/useMulticulturalSupportCentersLayer';
+import { usePublicFacilitySafetyLayer } from '@/hooks/usePublicFacilitySafetyLayer';
 
 export default function LayerBootstrap() {
   useDomainLayers();
@@ -46,6 +47,7 @@ export default function LayerBootstrap() {
   useChildWelfareFacilitiesLayer();
   useDisabledFacilitiesLayer();
   useMulticulturalSupportCentersLayer();
+  usePublicFacilitySafetyLayer();
 
   return null;
 }

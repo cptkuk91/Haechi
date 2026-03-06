@@ -79,28 +79,41 @@ export function extractRowsFromCommonJson(raw: unknown): JsonRecord[] {
   ].filter((candidate): candidate is JsonRecord => Boolean(candidate));
 
   for (const body of bodyCandidates) {
-    const items = body.items;
+    for (const items of [body.items, body.Items]) {
+      if (isRecord(items)) {
+        const itemRows = toArray(items.item);
+        if (itemRows.length > 0) return itemRows;
 
-    if (isRecord(items)) {
-      const itemRows = toArray(items.item);
-      if (itemRows.length > 0) return itemRows;
+        const upperItemRows = toArray(items.Item);
+        if (upperItemRows.length > 0) return upperItemRows;
+      }
+
+      const bodyRows = toArray(items);
+      if (bodyRows.length > 0) return bodyRows;
     }
-
-    const bodyRows = toArray(body.items);
-    if (bodyRows.length > 0) return bodyRows;
 
     const nestedDataRows = toArray(body.data);
     if (nestedDataRows.length > 0) return nestedDataRows;
   }
 
-  const rawItems = isRecord(raw.items) ? raw.items : null;
-  if (rawItems) {
-    const rawItemRows = toArray(rawItems.item);
-    if (rawItemRows.length > 0) return rawItemRows;
+  for (const rawItems of [raw.items, raw.Items]) {
+    if (isRecord(rawItems)) {
+      const rawItemRows = toArray(rawItems.item);
+      if (rawItemRows.length > 0) return rawItemRows;
+
+      const upperRawItemRows = toArray(rawItems.Item);
+      if (upperRawItemRows.length > 0) return upperRawItemRows;
+    }
+
+    const rawRows = toArray(rawItems);
+    if (rawRows.length > 0) return rawRows;
   }
 
   const itemRows = toArray(raw.item);
   if (itemRows.length > 0) return itemRows;
+
+  const upperItemRows = toArray(raw.Item);
+  if (upperItemRows.length > 0) return upperItemRows;
 
   return [];
 }

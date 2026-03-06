@@ -23,6 +23,7 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'vulnerable-child-welfare-facilities',
   'vulnerable-disabled-facilities',
   'vulnerable-multicultural-support-centers',
+  'infra-public-facility-safety',
 ]);
 
 export default function Team2LayerBootstrap() {
@@ -76,7 +77,7 @@ export default function Team2LayerBootstrap() {
 
       const source = payload.source ?? 'mock';
       const stateSnapshot = useAppStore.getState();
-      const affectedDomains = new Set(payload.layers.map((layer) => layer.domain));
+      const affectedDomains = new Set([payload.domain, ...payload.layers.map((layer) => layer.domain)]);
       for (const domain of affectedDomains) {
         const keepUpstreamDomain =
           source === 'mock'

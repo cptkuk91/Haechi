@@ -5,7 +5,7 @@ const PHASE3_REQUIRED_LAYER_IDS: Record<Team2DomainRoute, string[]> = {
   traffic: ['highway-bottleneck', 'highway-incidents', 'highway-reroute'],
   weather: ['weather-rainfall-column', 'weather-wind-particles', 'weather-rainfall-heat'],
   disaster: ['disaster-wildfire-points', 'disaster-earthquake-ripple'],
-  infra: ['infra-grid-nodes'],
+  infra: [],
   crime: ['crime-risk-heatmap'],
   health: ['health-ambulance-route', 'health-er-capacity'],
   vulnerable: ['vulnerable-amber-radius', 'vulnerable-emergency-iot'],
