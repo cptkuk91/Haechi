@@ -9,7 +9,7 @@ import { useAppStore } from '@/stores/app-store';
 function formatValue(value: unknown): string {
   if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toFixed(2);
   if (typeof value === 'string') return value;
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'boolean') return value ? '가능' : '불가';
   if (value === null || value === undefined) return '-';
   return JSON.stringify(value);
 }

@@ -73,16 +73,31 @@ export function extractRowsFromCommonJson(raw: unknown): JsonRecord[] {
   if (dataRows.length > 0) return dataRows;
 
   const response = isRecord(raw.response) ? raw.response : null;
-  const body = response && isRecord(response.body) ? response.body : null;
-  const items = body?.items;
+  const bodyCandidates = [
+    response && isRecord(response.body) ? response.body : null,
+    isRecord(raw.body) ? raw.body : null,
+  ].filter((candidate): candidate is JsonRecord => Boolean(candidate));
 
-  if (isRecord(items)) {
-    const itemRows = toArray(items.item);
-    if (itemRows.length > 0) return itemRows;
+  for (const body of bodyCandidates) {
+    const items = body.items;
+
+    if (isRecord(items)) {
+      const itemRows = toArray(items.item);
+      if (itemRows.length > 0) return itemRows;
+    }
+
+    const bodyRows = toArray(body.items);
+    if (bodyRows.length > 0) return bodyRows;
+
+    const nestedDataRows = toArray(body.data);
+    if (nestedDataRows.length > 0) return nestedDataRows;
   }
 
-  const bodyRows = toArray(body?.items);
-  if (bodyRows.length > 0) return bodyRows;
+  const rawItems = isRecord(raw.items) ? raw.items : null;
+  if (rawItems) {
+    const rawItemRows = toArray(rawItems.item);
+    if (rawItemRows.length > 0) return rawItemRows;
+  }
 
   const itemRows = toArray(raw.item);
   if (itemRows.length > 0) return itemRows;
@@ -94,10 +109,12 @@ export function extractTotalCountFromCommonJson(raw: unknown): number | null {
   if (!isRecord(raw)) return null;
 
   const response = isRecord(raw.response) ? raw.response : null;
-  const body = response && isRecord(response.body) ? response.body : null;
+  const responseBody = response && isRecord(response.body) ? response.body : null;
+  const topLevelBody = isRecord(raw.body) ? raw.body : null;
 
   const candidates: unknown[] = [
-    body?.totalCount,
+    responseBody?.totalCount,
+    topLevelBody?.totalCount,
     raw.totalCount,
     raw.count,
     response?.count,
@@ -119,7 +136,10 @@ export function extractResultWarningFromCommonJson(
   if (!isRecord(raw)) return null;
 
   const response = isRecord(raw.response) ? raw.response : null;
-  const header = response && isRecord(response.header) ? response.header : null;
+  const header = (
+    (response && isRecord(response.header) ? response.header : null)
+    ?? (isRecord(raw.header) ? raw.header : null)
+  );
 
   const codeRaw = typeof header?.resultCode === 'string' ? header.resultCode : null;
   const code = codeRaw ? codeRaw.trim() : null;
