@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { ChevronRight, PanelRightClose, Radar, Siren, Target } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import DataFeed from '@/components/ui/DataFeed';
+import { HealthFacilityDetailPanel } from '@/components/panels/HealthFacilityDetailPanel';
 import { useAppStore } from '@/stores/app-store';
 
 function formatValue(value: unknown): string {
@@ -52,6 +53,57 @@ function isHighwayTollgateSelection(selectedObject: { domain: string; properties
     || typeof properties.routeNo === 'string'
     || typeof properties.routeName === 'string'
   );
+}
+
+function isHealthFacilitySelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'health') return false;
+  const properties = selectedObject.properties;
+  return (
+    typeof properties.hpid === 'string'
+    || typeof properties.facilityCategory === 'string'
+    || typeof properties.institutionType === 'string'
+  );
+}
+
+function buildHealthFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'dutyName']);
+  const facilityType = pickFirstString(properties, ['facilityCategoryLabel']);
+  const institutionType = pickFirstString(properties, ['institutionType', 'dutyEmclsName']);
+  const hpid = pickFirstString(properties, ['hpid']);
+  const source = pickFirstString(properties, ['source']);
+  const occupancyPct = properties.occupancyPct;
+  const availableBeds = properties.availableBeds;
+  const severity = pickFirstString(properties, ['severity']);
+  const updatedAt = pickFirstString(properties, ['updatedAt', 'syncedAt', 'lastUpdated']);
+
+  const entries: Array<[string, unknown]> = [
+    ['기관명', name ?? '-'],
+    ['구분', facilityType ?? institutionType ?? '-'],
+  ];
+
+  if (institutionType && institutionType !== facilityType) {
+    entries.push(['기관유형', institutionType]);
+  }
+  if (hpid) {
+    entries.push(['HPID', hpid]);
+  }
+  if (occupancyPct !== undefined && occupancyPct !== null) {
+    entries.push(['수용률', `${formatValue(occupancyPct)}%`]);
+  }
+  if (availableBeds !== undefined && availableBeds !== null) {
+    entries.push(['가용병상', availableBeds]);
+  }
+  if (severity) {
+    entries.push(['상태', severity]);
+  }
+  if (updatedAt) {
+    entries.push(['갱신시각', updatedAt]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
 }
 
 function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
@@ -207,6 +259,9 @@ export default function StatusPanel() {
 
   const selectedEntries = useMemo(() => {
     if (!selectedObject) return [];
+    if (isHealthFacilitySelection(selectedObject)) {
+      return buildHealthFacilityEntries(selectedObject.properties);
+    }
     if (isHighwayTollgateSelection(selectedObject)) {
       return buildHighwayTollgateEntries(selectedObject.properties);
     }
@@ -241,71 +296,77 @@ export default function StatusPanel() {
   }
 
   return (
-    <aside className="absolute right-4 top-4 z-[70] flex h-[calc(100vh-2rem)] w-[320px] flex-col gap-3 pointer-events-auto">
-      <GlassCard
-        title="Object Detail"
-        subtitle={selectedObject ? `${selectedObject.domain.toUpperCase()} • ${selectedObject.type}` : 'No object selected'}
-        rightSlot={
-          <button
-            onClick={() => setRightPanelOpen(false)}
-            className="rounded-lg border border-cyan-900/40 p-1 text-cyan-700 transition-colors hover:border-cyan-700/60 hover:text-cyan-300"
-            aria-label="Close right status panel"
-          >
-            <PanelRightClose className="h-3.5 w-3.5" />
-          </button>
-        }
-      >
-        {selectedObject ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-700">Object ID</span>
-              <span className="max-w-[150px] truncate text-[10px] text-cyan-300">{selectedObject.id}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2">
-                <p className="text-[9px] tracking-[0.2em] text-cyan-800">LAT</p>
-                <p className="mt-1 text-[11px] text-cyan-300">{selectedObject.coordinates[1].toFixed(4)}</p>
-              </div>
-              <div className="rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2">
-                <p className="text-[9px] tracking-[0.2em] text-cyan-800">LNG</p>
-                <p className="mt-1 text-[11px] text-cyan-300">{selectedObject.coordinates[0].toFixed(4)}</p>
-              </div>
-            </div>
-            <ul className="space-y-1.5">
-              {selectedEntries.map(([key, value]) => (
-                <li key={key} className="flex items-center justify-between gap-2 rounded-lg border border-cyan-900/20 bg-cyan-950/20 px-2.5 py-1.5">
-                  <span className="max-w-[45%] truncate text-[10px] uppercase tracking-wider text-cyan-700">{key}</span>
-                  <span className="max-w-[55%] truncate text-right text-[10px] text-cyan-300">{formatValue(value)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-cyan-900/30 bg-cyan-950/15 text-[10px] tracking-[0.2em] text-cyan-700">
-            MAP OBJECT SELECT REQUIRED
-          </div>
-        )}
-      </GlassCard>
+    <div className="absolute right-4 top-4 z-[70] flex max-w-[calc(100vw-2rem)] flex-col-reverse items-end gap-3 xl:flex-row xl:items-start">
+      {selectedObject && isHealthFacilitySelection(selectedObject) ? (
+        <HealthFacilityDetailPanel selectedObject={selectedObject} />
+      ) : null}
 
-      <GlassCard
-        title="Live Feed"
-        subtitle="Alert engine stream"
-        className="overflow-hidden"
-      >
-        <div className="max-h-[26rem] overflow-y-auto pr-1">
-          <DataFeed
-            items={feedItems}
-            emptyMessage="No active alerts"
-            onItemClick={(item) => openAlertToast(item.id)}
-          />
+      <aside className="relative flex h-[calc(100vh-2rem)] w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 pointer-events-auto">
+        <GlassCard
+          title="Object Detail"
+          subtitle={selectedObject ? `${selectedObject.domain.toUpperCase()} • ${selectedObject.type}` : 'No object selected'}
+          rightSlot={
+            <button
+              onClick={() => setRightPanelOpen(false)}
+              className="rounded-lg border border-cyan-900/40 p-1 text-cyan-700 transition-colors hover:border-cyan-700/60 hover:text-cyan-300"
+              aria-label="Close right status panel"
+            >
+              <PanelRightClose className="h-3.5 w-3.5" />
+            </button>
+          }
+        >
+          {selectedObject ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-700">Object ID</span>
+                <span className="max-w-[150px] truncate text-[10px] text-cyan-300">{selectedObject.id}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2">
+                  <p className="text-[9px] tracking-[0.2em] text-cyan-800">LAT</p>
+                  <p className="mt-1 text-[11px] text-cyan-300">{selectedObject.coordinates[1].toFixed(4)}</p>
+                </div>
+                <div className="rounded-xl border border-cyan-900/30 bg-cyan-950/20 px-3 py-2">
+                  <p className="text-[9px] tracking-[0.2em] text-cyan-800">LNG</p>
+                  <p className="mt-1 text-[11px] text-cyan-300">{selectedObject.coordinates[0].toFixed(4)}</p>
+                </div>
+              </div>
+              <ul className="space-y-1.5">
+                {selectedEntries.map(([key, value]) => (
+                  <li key={key} className="flex items-center justify-between gap-2 rounded-lg border border-cyan-900/20 bg-cyan-950/20 px-2.5 py-1.5">
+                    <span className="max-w-[45%] truncate text-[10px] uppercase tracking-wider text-cyan-700">{key}</span>
+                    <span className="max-w-[55%] truncate text-right text-[10px] text-cyan-300">{formatValue(value)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-cyan-900/30 bg-cyan-950/15 text-[10px] tracking-[0.2em] text-cyan-700">
+              MAP OBJECT SELECT REQUIRED
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard
+          title="Live Feed"
+          subtitle="Alert engine stream"
+          className="overflow-hidden"
+        >
+          <div className="max-h-[26rem] overflow-y-auto pr-1">
+            <DataFeed
+              items={feedItems}
+              emptyMessage="No active alerts"
+              onItemClick={(item) => openAlertToast(item.id)}
+            />
+          </div>
+        </GlassCard>
+
+        <div className="pointer-events-none absolute inset-x-3 bottom-2 flex items-center justify-between text-[9px] tracking-[0.2em] text-cyan-800">
+          <span className="inline-flex items-center gap-1"><Radar className="h-3 w-3" />LINKED</span>
+          <span className="inline-flex items-center gap-1"><Siren className="h-3 w-3" />ALERT BUS</span>
+          <span className="inline-flex items-center gap-1"><Target className="h-3 w-3" />STORE</span>
         </div>
-      </GlassCard>
-
-      <div className="pointer-events-none absolute inset-x-3 bottom-2 flex items-center justify-between text-[9px] tracking-[0.2em] text-cyan-800">
-        <span className="inline-flex items-center gap-1"><Radar className="h-3 w-3" />LINKED</span>
-        <span className="inline-flex items-center gap-1"><Siren className="h-3 w-3" />ALERT BUS</span>
-        <span className="inline-flex items-center gap-1"><Target className="h-3 w-3" />STORE</span>
-      </div>
-    </aside>
+      </aside>
+    </div>
   );
 }

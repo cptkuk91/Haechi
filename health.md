@@ -1,6 +1,6 @@
 # 보건/의료 API 검토 메모
 
-기준일: 2026-03-06
+기준일: 2026-03-07
 
 검토 기준:
 - Perplexity + Brave Search로 확인
@@ -9,15 +9,20 @@
 
 ## 1. 현재 상태
 
-- [ ] `응급실 위치`
+- [x] `응급실 위치`
   - API: [국립중앙의료원_전국 응급의료기관 정보 조회 서비스](https://www.data.go.kr/data/15000563/openapi.do)
-  - 상태: 구현 파일은 있으나 현재 upstream 미작동
-  - 비고: 현재 `/api/health/emergency-rooms` 응답이 `source=mock`, `NMC emergency upstream responded 404` 상태
+  - 상태: upstream 정상 표시
+  - 비고: 현재 `/api/health/emergency-rooms` 응답이 `source=upstream` 상태로 확인됨
 
-- [ ] `응급실 수용 현황`
+- [x] `외상센터`
   - API: [국립중앙의료원_전국 응급의료기관 정보 조회 서비스](https://www.data.go.kr/data/15000563/openapi.do)
-  - 상태: mock 유지 중
-  - 비고: `getEmrrmRltmUsefulSckbdInfoInqire`로 실시간 가용병상 조회 가능하지만 좌표가 없어 `hpid` 기준 위치 조인이 필요
+  - 상태: upstream 정상 표시
+  - 비고: 현재 `/api/health/trauma-centers` 응답이 `source=upstream` 상태로 확인됨
+
+- [x] `응급실 수용 현황`
+  - API: [국립중앙의료원_전국 응급의료기관 정보 조회 서비스](https://www.data.go.kr/data/15000563/openapi.do)
+  - 상태: upstream 정상 표시
+  - 비고: `getEmrrmRltmUsefulSckbdInfoInqire` 실시간 가용병상 데이터를 `hpid` 기준으로 응급실/외상센터 위치에 조인했고, 병원 상세 패널은 `/api/health/facility-status`에서 `수용률/가용병상`을 계산해 표시함
 
 - [ ] `구급차 이동 경로`
   - 상태: mock 유지 중
@@ -67,11 +72,11 @@
   - 이유: 실시간 병상 값은 유용하지만 좌표형 메인 레이어로는 부족
   - 권장 사용: `응급실 위치` 또는 `병원 레이어`에 수용 정보 조인
 
-- [ ] `응급실 실시간 가용병상`
+- [x] `응급실 실시간 가용병상`
   - API: [국립중앙의료원_전국 응급의료기관 정보 조회 서비스](https://www.data.go.kr/data/15000563/openapi.do)
   - 적합성: 보조
   - 이유: `getEmrrmRltmUsefulSckbdInfoInqire`가 병상/중환자실/장비 가용량을 제공
-  - 권장 사용: `응급실 위치` 레이어와 `hpid`로 조인
+  - 권장 사용: `응급실 위치` 및 `외상센터` 레이어와 `hpid`로 조인
 
 - [ ] `병원 상세정보 보강`
   - API: [건강보험심사평가원_병원정보서비스](https://www.data.go.kr/data/15001698/openapi.do)

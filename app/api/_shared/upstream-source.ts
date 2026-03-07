@@ -17,6 +17,7 @@ const DOMAIN_UPSTREAM_ENV: Record<Team2DomainRoute, string> = {
 
 const DOMAIN_KEY_OVERRIDE_ENV: Partial<Record<Team2DomainRoute, string>> = {
   traffic: 'TEAM2_TRAFFIC_SEOUL_INCIDENT_API_KEY',
+  health: 'TEAM2_DISASTER_WILDFIRE_API_KEY',
 };
 
 function interpolateUpstreamTemplate(

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import type { DomainType } from '@/types/domain';
 import { useAppStore } from '@/stores/app-store';
 import {
   useCrimeData,
@@ -12,6 +13,8 @@ import {
   useWeatherData,
   type PublicAPIResponse,
 } from '@/hooks/usePublicAPI';
+import { useHealthEmergencyRoomsLayer } from '@/hooks/useHealthEmergencyRoomsLayer';
+import { useHealthTraumaCentersLayer } from '@/hooks/useHealthTraumaCentersLayer';
 import { usePolling } from '@/hooks/usePolling';
 import { toSelectedObjectFromFeature } from '@/lib/selected-object';
 
@@ -24,7 +27,13 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'vulnerable-multicultural-support-centers',
   'infra-public-facility-safety',
   'infra-highway-tollgates',
+  'health-emergency-room-location',
+  'health-trauma-centers',
 ]);
+
+function toDomainType(route: PublicAPIResponse['domain']): DomainType {
+  return route === 'traffic' ? 'highway' : route;
+}
 
 export default function Team2LayerBootstrap() {
   const addLayer = useAppStore((s) => s.addLayer);
@@ -37,6 +46,9 @@ export default function Team2LayerBootstrap() {
 
   const seenAlertIds = useRef<Set<string>>(new Set());
   const seenWarnings = useRef<Set<string>>(new Set());
+
+  useHealthEmergencyRoomsLayer();
+  useHealthTraumaCentersLayer();
 
   const trafficQuery = useTrafficData();
   const weatherQuery = useWeatherData();
@@ -77,7 +89,10 @@ export default function Team2LayerBootstrap() {
 
       const source = payload.source ?? 'mock';
       const stateSnapshot = useAppStore.getState();
-      const affectedDomains = new Set([payload.domain, ...payload.layers.map((layer) => layer.domain)]);
+      const affectedDomains = new Set<DomainType>([
+        toDomainType(payload.domain),
+        ...payload.layers.map((layer) => layer.domain),
+      ]);
       for (const domain of affectedDomains) {
         const keepUpstreamDomain =
           source === 'mock'

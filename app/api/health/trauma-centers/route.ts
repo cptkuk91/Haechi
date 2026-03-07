@@ -17,7 +17,7 @@ import {
 } from '@/app/api/health/_shared/emergency-capacity';
 import { extractXmlItems, extractXmlTagValue } from '@/app/api/_shared/xml-utils';
 
-const DEFAULT_UPSTREAM_URL = 'https://apis.data.go.kr/B552657/ErmctInfoInqireService/getEgytListInfoInqire';
+const DEFAULT_UPSTREAM_URL = 'https://apis.data.go.kr/B552657/ErmctInfoInqireService/getStrmListInfoInqire';
 const DEFAULT_PAGE_SIZE = 1000;
 const MIN_PAGE_SIZE = 1;
 const MAX_PAGE_SIZE = 1000;
@@ -49,7 +49,7 @@ function extractRowsFromXml(xml: string): JsonRecord[] {
   return rows;
 }
 
-async function fetchEmergencyRoomPage(args: {
+async function fetchTraumaCenterPage(args: {
   upstreamUrl: string;
   apiKey: string;
   pageNo: number;
@@ -76,7 +76,7 @@ async function fetchEmergencyRoomPage(args: {
     return {
       rows: [],
       totalCount: null,
-      warning: `NMC emergency upstream responded ${response.status}`,
+      warning: `NMC trauma upstream responded ${response.status}`,
     };
   }
 
@@ -85,13 +85,13 @@ async function fetchEmergencyRoomPage(args: {
     return {
       rows: [],
       totalCount: null,
-      warning: 'NMC emergency upstream returned empty body',
+      warning: 'NMC trauma upstream returned empty body',
     };
   }
 
   try {
     const json = JSON.parse(text);
-    const warning = extractResultWarningFromCommonJson(json, 'NMC emergency API') ?? undefined;
+    const warning = extractResultWarningFromCommonJson(json, 'NMC trauma API') ?? undefined;
     return {
       rows: extractRowsFromCommonJson(json),
       totalCount: extractTotalCountFromCommonJson(json),
@@ -107,7 +107,7 @@ async function fetchEmergencyRoomPage(args: {
   }
 }
 
-function toEmergencyRoomFeatures(
+function toTraumaCenterFeatures(
   rows: JsonRecord[],
   capacityByHpid: ReadonlyMap<string, EmergencyCapacitySnapshot>
 ): GeoJSON.Feature<GeoJSON.Point>[] {
@@ -121,13 +121,13 @@ function toEmergencyRoomFeatures(
     if (lng < -180 || lng > 180 || lat < -90 || lat > 90) continue;
 
     const hpid = pickString(row, ['hpid', 'HPID', 'id']);
-    const name = pickString(row, ['dutyName', 'name', 'hospitalName']) ?? '응급의료기관';
-    const institutionType = pickString(row, ['dutyEmclsName', 'institutionType']) ?? '응급의료기관';
+    const name = pickString(row, ['dutyName', 'name', 'hospitalName']) ?? '외상센터';
+    const institutionType = pickString(row, ['dutyEmclsName', 'institutionType']) ?? '외상센터';
     const address = pickString(row, ['dutyAddr', 'address']);
     const phone = pickString(row, ['dutyTel3', 'dutyTel1', 'phone']);
     const capacity = hpid ? capacityByHpid.get(hpid) : null;
 
-    const featureId = hpid ?? `er-${lng.toFixed(6)}-${lat.toFixed(6)}`;
+    const featureId = hpid ?? `trauma-${lng.toFixed(6)}-${lat.toFixed(6)}`;
     if (dedupe.has(featureId)) continue;
     dedupe.add(featureId);
 
@@ -143,8 +143,8 @@ function toEmergencyRoomFeatures(
         hpid,
         name,
         institutionType,
-        facilityCategory: 'emergency-room',
-        facilityCategoryLabel: '응급실',
+        facilityCategory: 'trauma-center',
+        facilityCategoryLabel: '외상센터',
         address,
         phone,
         source: 'nmc',
@@ -178,14 +178,14 @@ export async function GET() {
     );
   }
 
-  const upstreamUrl = process.env.TEAM2_HEALTH_EMERGENCY_ROOMS_UPSTREAM_URL ?? DEFAULT_UPSTREAM_URL;
+  const upstreamUrl = process.env.TEAM2_HEALTH_TRAUMA_CENTERS_UPSTREAM_URL ?? DEFAULT_UPSTREAM_URL;
   const pageSize = clampInt(
-    toPositiveInt(process.env.TEAM2_HEALTH_EMERGENCY_ROOMS_PAGE_SIZE, DEFAULT_PAGE_SIZE),
+    toPositiveInt(process.env.TEAM2_HEALTH_TRAUMA_CENTERS_PAGE_SIZE, DEFAULT_PAGE_SIZE),
     MIN_PAGE_SIZE,
     MAX_PAGE_SIZE
   );
   const maxPages = clampInt(
-    toPositiveInt(process.env.TEAM2_HEALTH_EMERGENCY_ROOMS_MAX_PAGES, DEFAULT_MAX_PAGES),
+    toPositiveInt(process.env.TEAM2_HEALTH_TRAUMA_CENTERS_MAX_PAGES, DEFAULT_MAX_PAGES),
     MIN_MAX_PAGES,
     MAX_MAX_PAGES
   );
@@ -195,7 +195,7 @@ export async function GET() {
 
   let totalPages = 1;
   for (let pageNo = 1; pageNo <= totalPages && pageNo <= maxPages; pageNo += 1) {
-    const pageResult = await fetchEmergencyRoomPage({
+    const pageResult = await fetchTraumaCenterPage({
       upstreamUrl,
       apiKey,
       pageNo,
@@ -217,14 +217,14 @@ export async function GET() {
     : { byHpid: new Map(), warnings: [] };
   warnings.push(...capacityResult.warnings);
 
-  const features = toEmergencyRoomFeatures(rows, capacityResult.byHpid);
+  const features = toTraumaCenterFeatures(rows, capacityResult.byHpid);
   if (features.length === 0) {
     return NextResponse.json(
       {
         source: 'mock',
         updatedAt: new Date().toISOString(),
         data: emptyFeatureCollection(),
-        warnings: warnings.length > 0 ? warnings : ['Emergency room upstream returned no coordinate features'],
+        warnings: warnings.length > 0 ? warnings : ['Trauma center upstream returned no coordinate features'],
       },
       {
         headers: {

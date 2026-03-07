@@ -6,7 +6,7 @@ import { CheckCircle2, ChevronDown, ChevronRight, Layers, Search, X } from 'luci
 import { useAppStore } from '@/stores/app-store';
 import { DOMAIN_REGISTRY } from '@/types/domain';
 import { DOMAIN_ICONS } from '@/lib/domain-icons';
-import type { LayerConfig } from '@/types/domain';
+import type { Alert, LayerConfig } from '@/types/domain';
 
 const CCTV_MAX_DISPLAY_OPTIONS = [100, 500, 1000, 2000, 5000, 10000, 20000] as const;
 const CCTV_MIN_DISPLAY = 100;
@@ -25,6 +25,18 @@ const PERSISTENT_EMPTY_DOMAIN_IDS = new Set([
 const RESTRICTED_LAYER_ALERT_ID = 'alert-restricted-cyber-access';
 const RESTRICTED_LAYER_ALERT_MESSAGE = '인가 된 사용자만 확인 가능합니다.';
 
+function createRestrictedAlert(): Alert {
+  return {
+    id: RESTRICTED_LAYER_ALERT_ID,
+    severity: 'info',
+    domain: 'cyber',
+    title: '사이버 안보 접근 제한',
+    message: RESTRICTED_LAYER_ALERT_MESSAGE,
+    timestamp: Date.now(),
+    dismissed: false,
+  };
+}
+
 export default function LayerPanel() {
   const {
     layers,
@@ -40,17 +52,11 @@ export default function LayerPanel() {
   const [cctvCustomInput, setCctvCustomInput] = useState(String(cctvMaxDisplayCount));
 
   const showRestrictedLayerToast = () => {
+    const restrictedAlert = createRestrictedAlert();
+
     useAppStore.setState((s) => ({
       alerts: [
-        {
-          id: RESTRICTED_LAYER_ALERT_ID,
-          severity: 'info',
-          domain: 'cyber',
-          title: '사이버 안보 접근 제한',
-          message: RESTRICTED_LAYER_ALERT_MESSAGE,
-          timestamp: Date.now(),
-          dismissed: false,
-        },
+        restrictedAlert,
         ...s.alerts.filter((alert) => alert.id !== RESTRICTED_LAYER_ALERT_ID),
       ].slice(0, 50),
       toastAlertIds: [
