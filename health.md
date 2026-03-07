@@ -9,28 +9,25 @@
 
 ## 1. 현재 상태
 
-- [x] `응급실 위치`
-  - API: [국립중앙의료원_전국 응급의료기관 정보 조회 서비스](https://www.data.go.kr/data/15000563/openapi.do)
-  - 상태: upstream 정상 표시
-  - 비고: 현재 `/api/health/emergency-rooms` 응답이 `source=upstream` 상태로 확인됨
+- [ ] `시도별 감염 위험도`
+  - 상태: 구현 후보 확정
+  - API: [질병관리청_전수신고 감염병 발생현황](https://www.data.go.kr/data/15139178/openapi.do) `/Region`
+  - 비고: 지역별(시도) 감염병 발생 현황(발생수, 인구 10만명당 발생률)을 제공하므로 `시도별 choropleth` 레이어 구성 가능
+  - 조인용 공간정보: [국토교통부_시군구](https://www.data.go.kr/data/15059464/openapi.do)
+  - 조인용 공간정보 비고: 행정구역도(광역시도/시군구/읍면동/리) 공간정보를 제공하므로 시도 경계와 조인 가능
+  - 제한사항: `공식 위험 구역 polygon`을 바로 내려주는 API는 아니며, 실시간이 아니라 시도 단위 통계 조인 방식임
 
-- [x] `외상센터`
-  - API: [국립중앙의료원_전국 응급의료기관 정보 조회 서비스](https://www.data.go.kr/data/15000563/openapi.do)
-  - 상태: upstream 정상 표시
-  - 비고: 현재 `/api/health/trauma-centers` 응답이 `source=upstream` 상태로 확인됨
+- [ ] `기간별 감염 추세`
+  - 상태: 구현 후보 확정
+  - API: [질병관리청_전수신고 감염병 발생현황](https://www.data.go.kr/data/15139178/openapi.do) `/PeriodBasic`, `/PeriodRegion`, `/PeriodPtnt`
+  - 비고: 기간별(연도, 월, 주) 발생 현황, 국내/국외 감염지역별 현황, 환자/의사환자/병원체보유자 분류별 현황을 제공
+  - 권장 사용: 지도 polygon보다는 선택 지역 상세 패널, 대시보드 차트, 트렌드 요약 카드에 적합
 
-- [x] `응급실 수용 현황`
-  - API: [국립중앙의료원_전국 응급의료기관 정보 조회 서비스](https://www.data.go.kr/data/15000563/openapi.do)
-  - 상태: upstream 정상 표시
-  - 비고: `getEmrrmRltmUsefulSckbdInfoInqire` 실시간 가용병상 데이터를 `hpid` 기준으로 응급실/외상센터 위치에 조인했고, 병원 상세 패널은 `/api/health/facility-status`에서 `수용률/가용병상`을 계산해 표시함
-
-- [ ] `구급차 이동 경로`
-  - 상태: mock 유지 중
-  - 비고: 공개 실시간 차량 위치 API는 아직 미확보
-
-- [ ] `감염 위험 구역`
-  - 상태: mock 유지 중
-  - 비고: 공개 전국형 실시간 polygon API는 별도 검토 필요
+- [ ] `감염병 상세 분포`
+  - 상태: 구현 후보 확정
+  - API: [질병관리청_전수신고 감염병 발생현황](https://www.data.go.kr/data/15139178/openapi.do) `/Disease`, `/Age`, `/Gender`, `/death`
+  - 비고: 감염병별 발생 수/발생률, 연령별, 성별, 사망 현황까지 제공하므로 상세 인사이트 패널 구성 가능
+  - 권장 사용: 지도 레이어 자체보다는 필터, 툴팁, 우측 상세 패널, 요약 통계 영역에 적합
 
 ## 2. 전국형 지도 레이어 후보
 
@@ -71,12 +68,6 @@
   - 적합성: 보조
   - 이유: 실시간 병상 값은 유용하지만 좌표형 메인 레이어로는 부족
   - 권장 사용: `응급실 위치` 또는 `병원 레이어`에 수용 정보 조인
-
-- [x] `응급실 실시간 가용병상`
-  - API: [국립중앙의료원_전국 응급의료기관 정보 조회 서비스](https://www.data.go.kr/data/15000563/openapi.do)
-  - 적합성: 보조
-  - 이유: `getEmrrmRltmUsefulSckbdInfoInqire`가 병상/중환자실/장비 가용량을 제공
-  - 권장 사용: `응급실 위치` 및 `외상센터` 레이어와 `hpid`로 조인
 
 - [ ] `병원 상세정보 보강`
   - API: [건강보험심사평가원_병원정보서비스](https://www.data.go.kr/data/15001698/openapi.do)

@@ -5,6 +5,7 @@ import { ChevronRight, PanelRightClose, Radar, Siren, Target } from 'lucide-reac
 import GlassCard from '@/components/ui/GlassCard';
 import DataFeed from '@/components/ui/DataFeed';
 import { HealthFacilityDetailPanel } from '@/components/panels/HealthFacilityDetailPanel';
+import { HealthInfectiousRiskLoadingToast } from '@/components/panels/HealthInfectiousRiskLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
 function formatValue(value: unknown): string {
@@ -65,6 +66,16 @@ function isHealthFacilitySelection(selectedObject: { domain: string; properties:
   );
 }
 
+function isHealthInfectiousRiskSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'health') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'infectious-risk-sido'
+    || typeof properties.riskMetric === 'string'
+    || typeof properties.provinceRank === 'number'
+  );
+}
+
 function buildHealthFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
   const name = pickFirstString(properties, ['name', 'dutyName']);
   const facilityType = pickFirstString(properties, ['facilityCategoryLabel']);
@@ -101,6 +112,74 @@ function buildHealthFacilityEntries(properties: Record<string, unknown>): Array<
   }
   if (source) {
     entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
+function buildHealthInfectiousRiskEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'provinceName', 'ctp_kor_nm']);
+  const riskMetricLabel = pickFirstString(properties, ['riskMetricLabel']);
+  const riskLabel = pickFirstString(properties, ['riskLabel']);
+  const aggregationLabel = pickFirstString(properties, ['aggregationLabel']);
+  const sourceLabel = pickFirstString(properties, ['sourceLabel', 'source']);
+  const year = pickFirstString(properties, ['year']);
+  const topDiseaseName = pickFirstString(properties, ['topDiseaseName']);
+  const topDiseaseGroup = pickFirstString(properties, ['topDiseaseGroup']);
+  const riskValue = properties.riskValue;
+  const incidencePer100k = properties.incidencePer100k;
+  const reportedCases = properties.reportedCases;
+  const provinceRank = properties.provinceRank;
+  const provinceTotal = properties.provinceTotal;
+  const diseaseCount = properties.diseaseCount;
+  const topDiseaseReportedCases = properties.topDiseaseReportedCases;
+  const topDiseaseIncidencePer100k = properties.topDiseaseIncidencePer100k;
+  const dataAvailable = properties.dataAvailable;
+
+  const entries: Array<[string, unknown]> = [
+    ['시도', name ?? '-'],
+  ];
+
+  if (riskLabel) {
+    entries.push(['위험수준', riskLabel]);
+  }
+  if (riskMetricLabel) {
+    entries.push(['지표', riskMetricLabel]);
+  }
+  if (riskValue !== undefined && riskValue !== null) {
+    entries.push(['지표값', riskValue]);
+  } else if (dataAvailable === false) {
+    entries.push(['지표값', '현재 정보 없음']);
+  }
+  if (reportedCases !== undefined && reportedCases !== null) {
+    entries.push(['발생건수', reportedCases]);
+  }
+  if (incidencePer100k !== undefined && incidencePer100k !== null) {
+    entries.push(['10만명당 발생률', incidencePer100k]);
+  }
+  if (typeof provinceRank === 'number' && typeof provinceTotal === 'number') {
+    entries.push(['시도 순위', `${provinceRank}/${provinceTotal}`]);
+  }
+  if (typeof diseaseCount === 'number') {
+    entries.push(['집계 질병수', diseaseCount]);
+  }
+  if (topDiseaseName) {
+    const diseaseSummary = [
+      topDiseaseName,
+      topDiseaseGroup ? `(${topDiseaseGroup})` : null,
+      topDiseaseReportedCases !== undefined && topDiseaseReportedCases !== null ? `${formatValue(topDiseaseReportedCases)}건` : null,
+      topDiseaseIncidencePer100k !== undefined && topDiseaseIncidencePer100k !== null ? `${formatValue(topDiseaseIncidencePer100k)}/10만명` : null,
+    ].filter(Boolean).join(' ');
+    entries.push(['대표 감염병', diseaseSummary]);
+  }
+  if (aggregationLabel) {
+    entries.push(['집계범위', aggregationLabel]);
+  }
+  if (year) {
+    entries.push(['기준연도', year]);
+  }
+  if (sourceLabel) {
+    entries.push(['소스', sourceLabel]);
   }
 
   return entries;
@@ -259,6 +338,9 @@ export default function StatusPanel() {
 
   const selectedEntries = useMemo(() => {
     if (!selectedObject) return [];
+    if (isHealthInfectiousRiskSelection(selectedObject)) {
+      return buildHealthInfectiousRiskEntries(selectedObject.properties);
+    }
     if (isHealthFacilitySelection(selectedObject)) {
       return buildHealthFacilityEntries(selectedObject.properties);
     }
@@ -302,6 +384,8 @@ export default function StatusPanel() {
       ) : null}
 
       <aside className="relative flex h-[calc(100vh-2rem)] w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 pointer-events-auto">
+        <HealthInfectiousRiskLoadingToast />
+
         <GlassCard
           title="Object Detail"
           subtitle={selectedObject ? `${selectedObject.domain.toUpperCase()} • ${selectedObject.type}` : 'No object selected'}

@@ -3,9 +3,8 @@
 import { useDomainLayers } from '@/hooks/useDomainLayers';
 import { useAircraftLayer } from '@/hooks/useAircraftLayer';
 import { useShipLayer } from '@/hooks/useShipLayer';
-import { useTrainLayer } from '@/hooks/useTrainLayer';
 import { useCyberDefenseLayer } from '@/hooks/useCyberDefenseLayer';
-import { useCrowdLayer } from '@/hooks/useCrowdLayer';
+import { useTransitCitydataLayers } from '@/hooks/useTransitCitydataLayers';
 import { useTrafficFlowLayer } from '@/hooks/useTrafficFlowLayer';
 import { useWeatherLayer } from '@/hooks/useWeatherLayer';
 import { useDisasterLayer } from '@/hooks/useDisasterLayer';
@@ -27,9 +26,8 @@ export default function LayerBootstrap() {
   useDomainLayers();
   useAircraftLayer();
   useShipLayer();
-  useTrainLayer();
   useCyberDefenseLayer();
-  useCrowdLayer();
+  useTransitCitydataLayers();
   useTrafficFlowLayer();
   useWeatherLayer();
   useDisasterLayer();

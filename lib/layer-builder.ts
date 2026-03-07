@@ -85,6 +85,39 @@ function getDynamicLineColor(
   ];
 }
 
+function getDynamicPolygonFillColor(
+  feature: GeoJSON.Feature,
+  fallback: [number, number, number, number]
+): [number, number, number, number] {
+  const properties = (feature.properties as Record<string, unknown> | null) ?? {};
+  const explicitColor =
+    parseColor(properties.fillColor as string | [number, number, number, number?] | undefined)
+    ?? parseColor(properties.color as string | [number, number, number, number?] | undefined);
+
+  if (!explicitColor) {
+    return toPastelColor(fallback, { mix: 0.44, alphaScale: 0.46 });
+  }
+
+  return explicitColor;
+}
+
+function getDynamicPolygonLineColor(
+  feature: GeoJSON.Feature,
+  fallback: [number, number, number, number]
+): [number, number, number, number] {
+  const properties = (feature.properties as Record<string, unknown> | null) ?? {};
+  const explicitColor =
+    parseColor(properties.lineColor as string | [number, number, number, number?] | undefined)
+    ?? parseColor(properties.strokeColor as string | [number, number, number, number?] | undefined)
+    ?? parseColor(properties.color as string | [number, number, number, number?] | undefined);
+
+  if (!explicitColor) {
+    return toPastelColor(fallback, { mix: 0.3, alphaScale: 0.9 });
+  }
+
+  return explicitColor;
+}
+
 // Feature → Point 좌표 추출
 function featureToPoint(feature: GeoJSON.Feature): [number, number] {
   const geometry = feature.geometry;
@@ -184,8 +217,8 @@ export function buildDeckLayer(config: LayerConfig, ctx: BuildContext) {
       return new GeoJsonLayer({
         ...baseProps,
         data: { type: 'FeatureCollection' as const, features },
-        getFillColor: toPastelColor(polygonBase, { mix: 0.44, alphaScale: 0.46 }),
-        getLineColor: toPastelColor(polygonBase, { mix: 0.3, alphaScale: 0.9 }),
+        getFillColor: (feature: GeoJSON.Feature) => getDynamicPolygonFillColor(feature, polygonBase),
+        getLineColor: (feature: GeoJSON.Feature) => getDynamicPolygonLineColor(feature, polygonBase),
         lineWidthMinPixels: lod === 'overview' ? 0.5 : 1,
         extruded: false,
         opacity: (config.style.opacity ?? 0.6) * lodStyle.opacity,

@@ -8,6 +8,27 @@ interface AlertPreferences {
   domains: Record<DomainType, boolean>;
 }
 
+export type HealthInfectiousRiskMetric = 'incidence' | 'count';
+
+export interface HealthInfectiousRiskFilters {
+  year: number | null;
+  metric: HealthInfectiousRiskMetric;
+  disease: string | null;
+}
+
+export interface HealthInfectiousRiskDiseaseOption {
+  value: string;
+  label: string;
+  group: string | null;
+}
+
+export interface HealthInfectiousRiskMeta {
+  availableYears: number[];
+  selectedYear: number | null;
+  diseaseOptions: HealthInfectiousRiskDiseaseOption[];
+  updatedAt: string | null;
+}
+
 export interface MapBounds {
   west: number;
   south: number;
@@ -29,6 +50,8 @@ interface AppStore {
   domainDataSource: Partial<Record<DomainType, 'mock' | 'upstream'>>;
   layerDataSource: Record<string, 'mock' | 'upstream'>;
   cctvMaxDisplayCount: number;
+  healthInfectiousRiskFilters: HealthInfectiousRiskFilters;
+  healthInfectiousRiskMeta: HealthInfectiousRiskMeta;
   mapBounds: MapBounds | null;
   pipelineErrors: Set<string>;
 
@@ -56,6 +79,8 @@ interface AppStore {
   setDomainDataSource: (domain: DomainType, source: 'mock' | 'upstream') => void;
   setLayerDataSource: (layerId: string, source: 'mock' | 'upstream') => void;
   setCctvMaxDisplayCount: (count: number) => void;
+  setHealthInfectiousRiskFilters: (filters: Partial<HealthInfectiousRiskFilters>) => void;
+  setHealthInfectiousRiskMeta: (meta: HealthInfectiousRiskMeta) => void;
   setMapBounds: (bounds: MapBounds | null) => void;
   setPipelineErrors: (errors: Set<string>) => void;
 
@@ -77,6 +102,23 @@ const DEFAULT_ALERT_DOMAINS = DOMAIN_REGISTRY.reduce<Record<DomainType, boolean>
 const MIN_CCTV_MAX_DISPLAY_COUNT = 100;
 const MAX_CCTV_MAX_DISPLAY_COUNT = 20_000;
 const DEFAULT_CCTV_MAX_DISPLAY_COUNT = 100;
+const DEFAULT_HEALTH_INFECTIOUS_RISK_YEAR_RANGE = 6;
+
+function buildDefaultHealthInfectiousRiskMeta(): HealthInfectiousRiskMeta {
+  const currentYear = new Date().getFullYear();
+  return {
+    availableYears: Array.from({ length: DEFAULT_HEALTH_INFECTIOUS_RISK_YEAR_RANGE + 1 }, (_value, index) => currentYear - index),
+    selectedYear: null,
+    diseaseOptions: [],
+    updatedAt: null,
+  };
+}
+
+const DEFAULT_HEALTH_INFECTIOUS_RISK_FILTERS: HealthInfectiousRiskFilters = {
+  year: null,
+  metric: 'incidence',
+  disease: null,
+};
 
 function sanitizeCctvMaxDisplayCount(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_CCTV_MAX_DISPLAY_COUNT;
@@ -99,6 +141,8 @@ export const useAppStore = create<AppStore>((set) => ({
   domainDataSource: {},
   layerDataSource: {},
   cctvMaxDisplayCount: DEFAULT_CCTV_MAX_DISPLAY_COUNT,
+  healthInfectiousRiskFilters: { ...DEFAULT_HEALTH_INFECTIOUS_RISK_FILTERS },
+  healthInfectiousRiskMeta: buildDefaultHealthInfectiousRiskMeta(),
   mapBounds: null,
   pipelineErrors: new Set<string>(),
 
@@ -277,6 +321,40 @@ export const useAppStore = create<AppStore>((set) => ({
       const normalized = sanitizeCctvMaxDisplayCount(count);
       if (s.cctvMaxDisplayCount === normalized) return s;
       return { cctvMaxDisplayCount: normalized };
+    }),
+
+  setHealthInfectiousRiskFilters: (filters) =>
+    set((s) => {
+      const next: HealthInfectiousRiskFilters = {
+        ...s.healthInfectiousRiskFilters,
+        ...filters,
+      };
+      const unchanged =
+        next.year === s.healthInfectiousRiskFilters.year
+        && next.metric === s.healthInfectiousRiskFilters.metric
+        && next.disease === s.healthInfectiousRiskFilters.disease;
+      return unchanged ? s : { healthInfectiousRiskFilters: next };
+    }),
+
+  setHealthInfectiousRiskMeta: (meta) =>
+    set((s) => {
+      const prev = s.healthInfectiousRiskMeta;
+      const sameYears =
+        prev.availableYears.length === meta.availableYears.length
+        && prev.availableYears.every((year, index) => year === meta.availableYears[index]);
+      const sameDiseases =
+        prev.diseaseOptions.length === meta.diseaseOptions.length
+        && prev.diseaseOptions.every((option, index) => (
+          option.value === meta.diseaseOptions[index]?.value
+          && option.label === meta.diseaseOptions[index]?.label
+          && option.group === meta.diseaseOptions[index]?.group
+        ));
+      const unchanged =
+        sameYears
+        && sameDiseases
+        && prev.selectedYear === meta.selectedYear
+        && prev.updatedAt === meta.updatedAt;
+      return unchanged ? s : { healthInfectiousRiskMeta: meta };
     }),
 
   setMapBounds: (bounds) =>

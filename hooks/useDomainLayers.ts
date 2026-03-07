@@ -8,7 +8,6 @@ import { toSelectedObjectFromFeature } from '@/lib/selected-object';
 // Data imports
 import { getNoFlyZonesGeoJSON, getMDLGeoJSON, getKADIZGeoJSON, getUXOZonesGeoJSON } from '@/data/defense';
 import { getPortsGeoJSON, getDangerZonesGeoJSON, getVTSGeoJSON, getVTSCoverageGeoJSON } from '@/data/maritime';
-import { getKTXRoutesGeoJSON, getSubwayRoutesGeoJSON, getStationsGeoJSON } from '@/data/transit';
 
 function emptyFeatureCollection(): GeoJSON.FeatureCollection {
   return {
@@ -122,35 +121,6 @@ export function useDomainLayers() {
         style: { color: [6, 182, 212, 40], opacity: 0.15 },
       },
 
-      // ── 대중교통 (도메인 2.9) ──
-      {
-        id: 'ktx-routes',
-        domain: 'transit',
-        name: 'KTX 노선',
-        type: 'line',
-        visible: false,
-        data: getKTXRoutesGeoJSON(),
-        style: { color: '#0052A4', lineWidth: 4 },
-      },
-      {
-        id: 'subway-routes',
-        domain: 'transit',
-        name: '수도권 지하철',
-        type: 'line',
-        visible: false,
-        data: getSubwayRoutesGeoJSON(),
-        style: { color: '#00A84D', lineWidth: 3 },
-      },
-      {
-        id: 'train-stations',
-        domain: 'transit',
-        name: '역사(주요역)',
-        type: 'marker',
-        visible: false,
-        data: getStationsGeoJSON(),
-        style: { color: '#8b5cf6', radius: 350, opacity: 0.9 },
-      },
-
       // ── 국가 인프라 (실데이터 placeholder) ──
       {
         id: 'infra-public-facility-safety',
@@ -219,6 +189,23 @@ export function useDomainLayers() {
               id: 'health-trauma-centers',
               domain: 'health',
               type: 'marker',
+            })
+          ),
+      },
+      {
+        id: 'health-infectious-risk-sido',
+        domain: 'health',
+        name: '시도별 감염 위험도',
+        type: 'polygon',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: [16, 185, 129, 96], opacity: 0.42 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'health-infectious-risk-sido',
+              domain: 'health',
+              type: 'polygon',
             })
           ),
       },

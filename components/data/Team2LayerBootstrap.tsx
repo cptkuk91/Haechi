@@ -14,6 +14,7 @@ import {
   type PublicAPIResponse,
 } from '@/hooks/usePublicAPI';
 import { useHealthEmergencyRoomsLayer } from '@/hooks/useHealthEmergencyRoomsLayer';
+import { useHealthInfectiousRiskSidoLayer } from '@/hooks/useHealthInfectiousRiskSidoLayer';
 import { useHealthTraumaCentersLayer } from '@/hooks/useHealthTraumaCentersLayer';
 import { usePolling } from '@/hooks/usePolling';
 import { toSelectedObjectFromFeature } from '@/lib/selected-object';
@@ -29,6 +30,11 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'infra-highway-tollgates',
   'health-emergency-room-location',
   'health-trauma-centers',
+  'health-infectious-risk-sido',
+  'transit-crowd-density',
+  'transit-subway-passengers',
+  'transit-bus-passengers',
+  'transit-sbike',
 ]);
 
 function toDomainType(route: PublicAPIResponse['domain']): DomainType {
@@ -49,6 +55,7 @@ export default function Team2LayerBootstrap() {
 
   useHealthEmergencyRoomsLayer();
   useHealthTraumaCentersLayer();
+  useHealthInfectiousRiskSidoLayer();
 
   const trafficQuery = useTrafficData();
   const weatherQuery = useWeatherData();

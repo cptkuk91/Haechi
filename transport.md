@@ -1,7 +1,7 @@
 # Transit & Crowd (대중교통/군중) - 데이터 레이어 API 조사
 
 > **도메인**: `transit` | **아이콘**: 🚋 | **색상**: `#8b5cf6`
-> **현재 상태**: 더미 카테고리 (레이어 없음) → 실제 공공 데이터 연동 필요
+> **현재 상태**: citydata API 연동 완료 (4개 레이어 실데이터), 더미 레이어 제거 필요
 
 ---
 
@@ -162,14 +162,50 @@
 
 ---
 
-## 구현 우선순위 권장
+## 구현 우선순위 — 서울시 실시간 도시데이터 (citydata) 기반
 
-| 순위 | 레이어 | API | 구현 난이도 | 시각적 효과 | 비고 |
-|------|--------|-----|------------|------------|------|
-| 1 | **인구 혼잡도 히트맵** | 서울시 실시간 도시데이터 | 중 | 높음 | 120개 장소 heatmap, 군중 모니터링에 최적 |
-| 2 | **지하철 열차 위치** | 서울시 지하철 실시간 위치 | 중 | 높음 | 호선별 색상 구분, 움직이는 마커 |
-| 3 | **지하철 도착 정보** | 서울시 지하철 실시간 도착 | 낮음 | 중 | StatusPanel 상세 정보로 활용 |
-| 4 | **버스 위치** | 서울시 버스 위치정보 | 높음 | 중 | 노선별 호출 필요, 대량 데이터 |
+> **공통 API**: `http://openapi.seoul.go.kr:8088/{KEY}/xml/citydata/1/5/{장소명}`
+> **인증키**: `SEOUL_KEY=6c62796e4e6370743634564f61594f`
+> **도메인**: `transit` (기존 더미 레이어 대체)
+
+### 1차 구현 (transit 도메인)
+
+- [x] **인구 혼잡도** (완료) — `LIVE_PPLTN_STTS` 섹션
+  - `transit-crowd-density` (heatmap) | `app/api/transit/citydata/route.ts` + `hooks/useTransitCitydataLayers.ts`
+  - 15개 주요 장소 혼잡도 (여유/보통/약간 붐빔/붐빔), 인구 MIN/MAX, 연령/성별 비율
+  - 기존 더미 `useCrowdLayer.ts` 대체 완료 (LayerBootstrap에서 제거됨)
+
+- [x] **지하철 승하차 인원** (완료) — `LIVE_SUB_PPLTN` + `SUB_STTS` 섹션
+  - `transit-subway-passengers` (marker) | 역 좌표 `SUB_STN_X/Y` API 포함
+  - 역명, 호선, 누적/30분/10분/5분 승하차 인원
+
+- [x] **버스 승하차 인원** (완료) — `LIVE_BUS_PPLTN` + `BUS_STN_STTS` 섹션
+  - `transit-bus-passengers` (marker) | 정류소 좌표 `BUS_STN_X/Y` API 포함
+  - 정류소명, 고유번호, 누적/30분/10분/5분 승하차 인원
+
+- [x] **따릉이 현황** (완료) — `SBIKE_STTS` 섹션
+  - `transit-sbike` (marker) | 대여소 좌표 `SBIKE_X/Y` API 포함
+  - 대여소명, 거치율, 주차수, 거치대수, 잔여 대수
+
+### 더미 데이터 레이어 (제거 완료)
+
+| ID | 이름 | 삭제된 파일 | 상태 |
+|----|------|-----------|------|
+| `crowd-density` | 군중 밀집도 | `hooks/useCrowdLayer.ts` | 삭제 완료. `transit-crowd-density`로 대체 |
+| `train-live` | 실시간 열차 위치 | `hooks/useTrainLayer.ts` | 삭제 완료 |
+| `ktx-routes` | KTX 노선 | `data/transit.ts` | 삭제 완료 |
+| `subway-routes` | 수도권 지하철 | `data/transit.ts` | 삭제 완료 |
+| `train-stations` | 역사(주요역) | `data/transit.ts` | 삭제 완료 |
+
+### 2차 구현 (추후 진행 — 기존 도메인에 매핑)
+
+> 아래 항목은 1차 구현 완료 후 진행. 동일 citydata API에서 추출 가능.
+
+- [ ] **도로 소통 현황** (`ROAD_TRAFFIC_STTS`) → `traffic` 또는 `highway` 도메인
+- [ ] **주차장 현황** (`PRK_STTS`) → `infra` 도메인
+- [ ] **전기차 충전소** (`CHARGER_STTS`) → `infra` 도메인
+- [ ] **날씨 현황** (`WEATHER_STTS`) → `weather` 도메인
+- [ ] **사고 통제 현황** (`ACDNT_CNTRL_STTS`) → `disaster` 도메인
 
 ---
 
@@ -177,7 +213,7 @@
 
 ```env
 # 서울 열린데이터광장 인증키 (실시간 도시데이터 + 지하철 위치/도착 공용)
-TEAM2_SEOUL_OPENDATA_API_KEY=
+SEOUL_KEY=6c62796e4e6370743634564f61594f
 
 # 서울시 버스 API (별도 인증키 필요 시)
 TEAM2_SEOUL_BUS_API_KEY=
@@ -192,10 +228,10 @@ TEAM2_TAGO_BUS_API_KEY=
 
 ```
 app/api/transit/
-  crowd-density/route.ts    → 서울시 실시간 인구 혼잡도
-  subway-position/route.ts  → 지하철 실시간 열차 위치
-  subway-arrival/route.ts   → 지하철 실시간 도착정보
-  bus-location/route.ts     → 버스 실시간 위치 (선택)
+  citydata/route.ts         → (완료) 서울시 실시간 도시데이터 통합 호출 (15개 장소, 4개 레이어 데이터 반환)
+
+hooks/
+  useTransitCitydataLayers.ts → (완료) 4개 레이어 등록/폴링/동기화
 ```
 
 ---
@@ -207,3 +243,4 @@ app/api/transit/
 3. **지하철 위치 보정**: `recptnDt`(생성 시각)와 현재 시각 차이만큼 열차 위치 보정 로직 필요
 4. **버스 API**: 노선별 개별 호출이므로 전체 표시는 비현실적. 주요 노선 선별 또는 혼잡도 데이터만 활용
 5. **기존 패턴 준수**: `usePublicAPI` 훅 + `Team2LayerBootstrap` 패턴에 맞춰 `useTransitData()` 구현
+6. **citydata 응답 형식**: XML 응답이므로 파싱 로직 필요. 기존 `xml-utils.ts` 활용 가능
