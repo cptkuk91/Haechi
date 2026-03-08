@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useIsFetching } from '@tanstack/react-query';
-import { Activity, Globe2, TrendingUp, UserRoundSearch } from 'lucide-react';
+import { Activity, Globe2, PanelRightClose, TrendingUp, UserRoundSearch } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { useAppStore, type HealthInfectiousTrendPoint } from '@/stores/app-store';
 
@@ -158,6 +158,7 @@ function BreakdownRows({
 
 export function HealthInfectiousTrendsPanel() {
   const layerVisible = useAppStore((s) => s.layers['health-infectious-trends']?.visible ?? false);
+  const toggleLayer = useAppStore((s) => s.toggleLayer);
   const filters = useAppStore((s) => s.healthInfectiousTrendFilters);
   const meta = useAppStore((s) => s.healthInfectiousTrendMeta);
   const data = useAppStore((s) => s.healthInfectiousTrendData);
@@ -182,6 +183,16 @@ export function HealthInfectiousTrendsPanel() {
       <GlassCard
         title="Infectious Trends"
         subtitle={`${data?.periodTypeLabel ?? '기간별'} • ${diseaseLabel}`}
+        rightSlot={(
+          <button
+            type="button"
+            onClick={() => toggleLayer('health-infectious-trends')}
+            className="rounded-lg border border-emerald-400/18 bg-emerald-500/10 p-1.5 text-emerald-100 transition-colors hover:border-emerald-300/35 hover:bg-emerald-500/16"
+            aria-label="Close infectious trends panel"
+          >
+            <PanelRightClose className="h-3.5 w-3.5" />
+          </button>
+        )}
         className="h-full overflow-hidden border-emerald-500/20 bg-[radial-gradient(circle_at_top,_rgba(20,184,166,0.18),_rgba(6,78,59,0.12)_24%,_rgba(10,15,20,0.92)_72%)] shadow-[0_0_42px_rgba(20,184,166,0.16)]"
       >
         <div className="flex h-full flex-col gap-4 overflow-y-auto pr-1">

@@ -34,7 +34,7 @@ export default function CityNavBar() {
   }, [resetCamera]);
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 pointer-events-auto">
+    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[65] flex items-center gap-3 pointer-events-auto">
       <button
         onClick={handleResetView}
         className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all backdrop-blur-md ${

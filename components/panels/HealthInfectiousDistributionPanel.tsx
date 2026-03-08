@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useIsFetching } from '@tanstack/react-query';
-import { Activity, BarChart3, ChevronDown, ChevronUp, Skull, Users } from 'lucide-react';
+import { Activity, BarChart3, ChevronDown, ChevronUp, PanelRightClose, Skull, Users } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { useAppStore, type HealthInfectiousDistributionRow, type HealthInfectiousRiskMetric } from '@/stores/app-store';
 
@@ -224,6 +224,7 @@ function DeathBreakdownSection({
 
 export function HealthInfectiousDistributionPanel() {
   const layerVisible = useAppStore((s) => s.layers['health-infectious-distribution']?.visible ?? false);
+  const toggleLayer = useAppStore((s) => s.toggleLayer);
   const filters = useAppStore((s) => s.healthInfectiousDistributionFilters);
   const meta = useAppStore((s) => s.healthInfectiousDistributionMeta);
   const data = useAppStore((s) => s.healthInfectiousDistributionData);
@@ -241,6 +242,16 @@ export function HealthInfectiousDistributionPanel() {
       <GlassCard
         title="Infectious Distribution"
         subtitle={`${data?.yearLabel ?? '최신'} • ${data?.metricLabel ?? '발생건수'}`}
+        rightSlot={(
+          <button
+            type="button"
+            onClick={() => toggleLayer('health-infectious-distribution')}
+            className="rounded-lg border border-orange-400/18 bg-orange-500/10 p-1.5 text-orange-100 transition-colors hover:border-orange-300/35 hover:bg-orange-500/16"
+            aria-label="Close infectious distribution panel"
+          >
+            <PanelRightClose className="h-3.5 w-3.5" />
+          </button>
+        )}
         className="flex h-full min-h-0 flex-col overflow-hidden border-orange-500/20 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.18),_rgba(120,53,15,0.14)_28%,_rgba(10,15,20,0.92)_72%)] shadow-[0_0_42px_rgba(249,115,22,0.15)]"
       >
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
