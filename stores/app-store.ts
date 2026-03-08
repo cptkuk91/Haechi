@@ -9,6 +9,7 @@ interface AlertPreferences {
 }
 
 export type HealthInfectiousRiskMetric = 'incidence' | 'count';
+export type HealthInfectiousTrendPeriodType = 'year' | 'month' | 'week';
 
 export interface HealthInfectiousRiskFilters {
   year: number | null;
@@ -27,6 +28,61 @@ export interface HealthInfectiousRiskMeta {
   selectedYear: number | null;
   diseaseOptions: HealthInfectiousRiskDiseaseOption[];
   updatedAt: string | null;
+}
+
+export interface HealthInfectiousTrendFilters {
+  periodType: HealthInfectiousTrendPeriodType;
+  startYear: number;
+  endYear: number;
+  disease: string | null;
+}
+
+export type HealthInfectiousTrendDiseaseOption = HealthInfectiousRiskDiseaseOption;
+
+export interface HealthInfectiousTrendMeta {
+  availableYears: number[];
+  selectedPeriodType: HealthInfectiousTrendPeriodType;
+  selectedStartYear: number;
+  selectedEndYear: number;
+  diseaseOptions: HealthInfectiousTrendDiseaseOption[];
+  updatedAt: string | null;
+}
+
+export interface HealthInfectiousTrendPoint {
+  period: string;
+  sortKey: number;
+  total: number;
+  domestic: number | null;
+  overseas: number | null;
+  patient: number | null;
+  suspected: number | null;
+  carrier: number | null;
+}
+
+export interface HealthInfectiousTrendSummary {
+  latestPeriod: string | null;
+  latestTotal: number | null;
+  previousPeriod: string | null;
+  previousTotal: number | null;
+  changePct: number | null;
+  peakPeriod: string | null;
+  peakValue: number | null;
+  pointCount: number;
+}
+
+export interface HealthInfectiousTrendData {
+  layerKind: 'infectious-trends';
+  sourceLabel: string;
+  periodType: HealthInfectiousTrendPeriodType;
+  periodTypeLabel: string;
+  startYear: number;
+  endYear: number;
+  disease: string | null;
+  diseaseLabel: string | null;
+  overallSeries: HealthInfectiousTrendPoint[];
+  regionSeries: HealthInfectiousTrendPoint[];
+  patientSeries: HealthInfectiousTrendPoint[];
+  summary: HealthInfectiousTrendSummary;
 }
 
 export interface MapBounds {
@@ -52,6 +108,9 @@ interface AppStore {
   cctvMaxDisplayCount: number;
   healthInfectiousRiskFilters: HealthInfectiousRiskFilters;
   healthInfectiousRiskMeta: HealthInfectiousRiskMeta;
+  healthInfectiousTrendFilters: HealthInfectiousTrendFilters;
+  healthInfectiousTrendMeta: HealthInfectiousTrendMeta;
+  healthInfectiousTrendData: HealthInfectiousTrendData | null;
   mapBounds: MapBounds | null;
   pipelineErrors: Set<string>;
 
@@ -81,6 +140,9 @@ interface AppStore {
   setCctvMaxDisplayCount: (count: number) => void;
   setHealthInfectiousRiskFilters: (filters: Partial<HealthInfectiousRiskFilters>) => void;
   setHealthInfectiousRiskMeta: (meta: HealthInfectiousRiskMeta) => void;
+  setHealthInfectiousTrendFilters: (filters: Partial<HealthInfectiousTrendFilters>) => void;
+  setHealthInfectiousTrendMeta: (meta: HealthInfectiousTrendMeta) => void;
+  setHealthInfectiousTrendData: (data: HealthInfectiousTrendData | null) => void;
   setMapBounds: (bounds: MapBounds | null) => void;
   setPipelineErrors: (errors: Set<string>) => void;
 
@@ -120,6 +182,29 @@ const DEFAULT_HEALTH_INFECTIOUS_RISK_FILTERS: HealthInfectiousRiskFilters = {
   disease: null,
 };
 
+function buildDefaultHealthInfectiousTrendFilters(): HealthInfectiousTrendFilters {
+  const currentYear = new Date().getFullYear();
+  return {
+    periodType: 'year',
+    startYear: currentYear - 1,
+    endYear: currentYear,
+    disease: null,
+  };
+}
+
+function buildDefaultHealthInfectiousTrendMeta(): HealthInfectiousTrendMeta {
+  const filters = buildDefaultHealthInfectiousTrendFilters();
+  const currentYear = new Date().getFullYear();
+  return {
+    availableYears: Array.from({ length: DEFAULT_HEALTH_INFECTIOUS_RISK_YEAR_RANGE + 1 }, (_value, index) => currentYear - index),
+    selectedPeriodType: filters.periodType,
+    selectedStartYear: filters.startYear,
+    selectedEndYear: filters.endYear,
+    diseaseOptions: [],
+    updatedAt: null,
+  };
+}
+
 function sanitizeCctvMaxDisplayCount(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_CCTV_MAX_DISPLAY_COUNT;
   const normalized = Math.floor(value);
@@ -143,6 +228,9 @@ export const useAppStore = create<AppStore>((set) => ({
   cctvMaxDisplayCount: DEFAULT_CCTV_MAX_DISPLAY_COUNT,
   healthInfectiousRiskFilters: { ...DEFAULT_HEALTH_INFECTIOUS_RISK_FILTERS },
   healthInfectiousRiskMeta: buildDefaultHealthInfectiousRiskMeta(),
+  healthInfectiousTrendFilters: buildDefaultHealthInfectiousTrendFilters(),
+  healthInfectiousTrendMeta: buildDefaultHealthInfectiousTrendMeta(),
+  healthInfectiousTrendData: null,
   mapBounds: null,
   pipelineErrors: new Set<string>(),
 
@@ -356,6 +444,46 @@ export const useAppStore = create<AppStore>((set) => ({
         && prev.updatedAt === meta.updatedAt;
       return unchanged ? s : { healthInfectiousRiskMeta: meta };
     }),
+
+  setHealthInfectiousTrendFilters: (filters) =>
+    set((s) => {
+      const next: HealthInfectiousTrendFilters = {
+        ...s.healthInfectiousTrendFilters,
+        ...filters,
+      };
+      const unchanged =
+        next.periodType === s.healthInfectiousTrendFilters.periodType
+        && next.startYear === s.healthInfectiousTrendFilters.startYear
+        && next.endYear === s.healthInfectiousTrendFilters.endYear
+        && next.disease === s.healthInfectiousTrendFilters.disease;
+      return unchanged ? s : { healthInfectiousTrendFilters: next };
+    }),
+
+  setHealthInfectiousTrendMeta: (meta) =>
+    set((s) => {
+      const prev = s.healthInfectiousTrendMeta;
+      const sameYears =
+        prev.availableYears.length === meta.availableYears.length
+        && prev.availableYears.every((year, index) => year === meta.availableYears[index]);
+      const sameDiseases =
+        prev.diseaseOptions.length === meta.diseaseOptions.length
+        && prev.diseaseOptions.every((option, index) => (
+          option.value === meta.diseaseOptions[index]?.value
+          && option.label === meta.diseaseOptions[index]?.label
+          && option.group === meta.diseaseOptions[index]?.group
+        ));
+      const unchanged =
+        sameYears
+        && sameDiseases
+        && prev.selectedPeriodType === meta.selectedPeriodType
+        && prev.selectedStartYear === meta.selectedStartYear
+        && prev.selectedEndYear === meta.selectedEndYear
+        && prev.updatedAt === meta.updatedAt;
+      return unchanged ? s : { healthInfectiousTrendMeta: meta };
+    }),
+
+  setHealthInfectiousTrendData: (data) =>
+    set({ healthInfectiousTrendData: data }),
 
   setMapBounds: (bounds) =>
     set((s) => {

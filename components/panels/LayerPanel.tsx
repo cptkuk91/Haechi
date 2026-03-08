@@ -26,6 +26,31 @@ const PERSISTENT_EMPTY_DOMAIN_IDS = new Set([
 const RESTRICTED_LAYER_ALERT_ID = 'alert-restricted-cyber-access';
 const RESTRICTED_LAYER_ALERT_MESSAGE = '인가 된 사용자만 확인 가능합니다.';
 
+function getTrendMaxRangeYears(periodType: 'year' | 'month' | 'week'): number {
+  if (periodType === 'week') return 2;
+  if (periodType === 'month') return 3;
+  return 6;
+}
+
+function normalizeTrendRange(periodType: 'year' | 'month' | 'week', startYear: number, endYear: number) {
+  let nextStartYear = startYear;
+  let nextEndYear = endYear;
+
+  if (nextStartYear > nextEndYear) {
+    [nextStartYear, nextEndYear] = [nextEndYear, nextStartYear];
+  }
+
+  const maxRangeYears = getTrendMaxRangeYears(periodType);
+  if (nextEndYear - nextStartYear + 1 > maxRangeYears) {
+    nextStartYear = nextEndYear - maxRangeYears + 1;
+  }
+
+  return {
+    startYear: nextStartYear,
+    endYear: nextEndYear,
+  };
+}
+
 function createRestrictedAlert(): Alert {
   return {
     id: RESTRICTED_LAYER_ALERT_ID,
@@ -49,13 +74,18 @@ export default function LayerPanel() {
     healthInfectiousRiskFilters,
     healthInfectiousRiskMeta,
     setHealthInfectiousRiskFilters,
+    healthInfectiousTrendFilters,
+    healthInfectiousTrendMeta,
+    setHealthInfectiousTrendFilters,
   } = useAppStore();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [cctvCustomInput, setCctvCustomInput] = useState(String(cctvMaxDisplayCount));
   const [isHealthRiskPending, startHealthRiskTransition] = useTransition();
+  const [isHealthTrendPending, startHealthTrendTransition] = useTransition();
   const healthRiskFetchCount = useIsFetching({ queryKey: ['health', 'infectious-risk-sido'] });
+  const healthTrendFetchCount = useIsFetching({ queryKey: ['health', 'infectious-trends'] });
 
   const showRestrictedLayerToast = () => {
     const restrictedAlert = createRestrictedAlert();
@@ -145,6 +175,42 @@ export default function LayerPanel() {
       setHealthInfectiousRiskFilters(next);
     });
   };
+  const healthInfectiousTrendSelectedDiseaseLabel = useMemo(() => {
+    if (!healthInfectiousTrendFilters.disease) return '전체 감염병';
+    return healthInfectiousTrendMeta.diseaseOptions.find((option) => option.value === healthInfectiousTrendFilters.disease)?.label
+      ?? healthInfectiousTrendFilters.disease;
+  }, [healthInfectiousTrendFilters.disease, healthInfectiousTrendMeta.diseaseOptions]);
+  const healthInfectiousTrendPeriodLabel = useMemo(() => {
+    if (healthInfectiousTrendFilters.periodType === 'month') return '월별';
+    return '연도별';
+  }, [healthInfectiousTrendFilters.periodType]);
+  const healthInfectiousTrendUpdatedAtLabel = useMemo(() => {
+    if (!healthInfectiousTrendMeta.updatedAt) return null;
+    const parsed = new Date(healthInfectiousTrendMeta.updatedAt);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toLocaleTimeString('ko-KR', { hour12: false });
+  }, [healthInfectiousTrendMeta.updatedAt]);
+  const isHealthTrendLoading = isHealthTrendPending || healthTrendFetchCount > 0;
+  const updateHealthInfectiousTrendFilters = (next: Partial<typeof healthInfectiousTrendFilters>) => {
+    startHealthTrendTransition(() => {
+      setHealthInfectiousTrendFilters(next);
+    });
+  };
+
+  useEffect(() => {
+    if (healthInfectiousTrendFilters.periodType !== 'week') return;
+    const normalizedRange = normalizeTrendRange('month', healthInfectiousTrendFilters.startYear, healthInfectiousTrendFilters.endYear);
+    setHealthInfectiousTrendFilters({
+      periodType: 'month',
+      startYear: normalizedRange.startYear,
+      endYear: normalizedRange.endYear,
+    });
+  }, [
+    healthInfectiousTrendFilters.endYear,
+    healthInfectiousTrendFilters.periodType,
+    healthInfectiousTrendFilters.startYear,
+    setHealthInfectiousTrendFilters,
+  ]);
 
   // 검색 필터
   const filteredDomains = searchQuery
@@ -304,6 +370,8 @@ export default function LayerPanel() {
                                         ? '외상센터 (완료)'
                                       : layer.id === 'health-infectious-risk-sido' && layerDataSource[layer.id] === 'upstream'
                                         ? '시도별 감염 위험도 (완료)'
+                                      : layer.id === 'health-infectious-trends' && layerDataSource[layer.id] === 'upstream'
+                                        ? '기간별 감염 추세 (완료)'
                                       : layer.id === 'vulnerable-missing-persons' && layerDataSource[layer.id] === 'upstream'
                                         ? '실종 발생 위치 (완료)'
                                       : layer.id === 'vulnerable-elderly-welfare-facilities' && layerDataSource[layer.id] === 'upstream'
@@ -443,6 +511,119 @@ export default function LayerPanel() {
 
                                       <p className="px-1 text-[9px] tracking-wider text-cyan-200/80 font-mono">
                                         {`${healthInfectiousRiskFilters.year === null ? healthInfectiousRiskLatestYearLabel : `${healthInfectiousRiskFilters.year}년`} · ${healthInfectiousRiskSelectedDiseaseLabel} · ${healthInfectiousRiskMetricLabel}${isHealthRiskLoading ? ' · 로드 중...' : healthInfectiousRiskUpdatedAtLabel ? ` · ${healthInfectiousRiskUpdatedAtLabel} 기준` : ''}`}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {layer.id === 'health-infectious-trends' && layer.visible && (
+                                    <div className="px-2 pb-2 space-y-1.5">
+                                      <div className="rounded-md border border-cyan-500/25 bg-cyan-900/10 p-1">
+                                        <div className="grid grid-cols-2 gap-1">
+                                          {([
+                                            ['year', '연도별'],
+                                            ['month', '월별'],
+                                          ] as const).map(([periodType, labelText]) => (
+                                            <button
+                                              key={periodType}
+                                              type="button"
+                                              onClick={() => {
+                                                const normalizedRange = normalizeTrendRange(
+                                                  periodType,
+                                                  healthInfectiousTrendFilters.startYear,
+                                                  healthInfectiousTrendFilters.endYear
+                                                );
+                                                updateHealthInfectiousTrendFilters({
+                                                  periodType,
+                                                  startYear: normalizedRange.startYear,
+                                                  endYear: normalizedRange.endYear,
+                                                });
+                                              }}
+                                              className={`rounded px-2 py-1 text-[10px] font-mono transition-colors ${
+                                                healthInfectiousTrendFilters.periodType === periodType
+                                                  ? 'bg-cyan-300 text-[#04121e]'
+                                                  : 'bg-[#0b1f31] text-cyan-100 hover:bg-cyan-900/40'
+                                              }`}
+                                            >
+                                              {labelText}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                        <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
+                                          Start
+                                        </span>
+                                        <select
+                                          value={healthInfectiousTrendFilters.startYear}
+                                          onChange={(event) => {
+                                            const nextStartYear = Number(event.target.value);
+                                            const normalizedRange = normalizeTrendRange(
+                                              healthInfectiousTrendFilters.periodType,
+                                              nextStartYear,
+                                              Math.max(healthInfectiousTrendFilters.endYear, nextStartYear)
+                                            );
+                                            updateHealthInfectiousTrendFilters(normalizedRange);
+                                          }}
+                                          className="min-w-[110px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                        >
+                                          {healthInfectiousTrendMeta.availableYears.map((year) => (
+                                            <option key={year} value={year}>
+                                              {year}년
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+
+                                      <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                        <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
+                                          End
+                                        </span>
+                                        <select
+                                          value={healthInfectiousTrendFilters.endYear}
+                                          onChange={(event) => {
+                                            const nextEndYear = Number(event.target.value);
+                                            const normalizedRange = normalizeTrendRange(
+                                              healthInfectiousTrendFilters.periodType,
+                                              Math.min(healthInfectiousTrendFilters.startYear, nextEndYear),
+                                              nextEndYear
+                                            );
+                                            updateHealthInfectiousTrendFilters(normalizedRange);
+                                          }}
+                                          className="min-w-[110px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                        >
+                                          {healthInfectiousTrendMeta.availableYears.map((year) => (
+                                            <option key={year} value={year}>
+                                              {year}년
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+
+                                      <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                        <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
+                                          Disease
+                                        </span>
+                                        <select
+                                          value={healthInfectiousTrendFilters.disease ?? 'all'}
+                                          onChange={(event) => {
+                                            const raw = event.target.value;
+                                            updateHealthInfectiousTrendFilters({
+                                              disease: raw === 'all' ? null : raw,
+                                            });
+                                          }}
+                                          className="min-w-[110px] max-w-[132px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                        >
+                                          <option value="all">전체 감염병</option>
+                                          {healthInfectiousTrendMeta.diseaseOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                              {option.group ? `${option.label} (${option.group})` : option.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+
+                                      <p className="px-1 text-[9px] tracking-wider text-cyan-200/80 font-mono">
+                                        {`${healthInfectiousTrendPeriodLabel} · ${healthInfectiousTrendFilters.startYear}년-${healthInfectiousTrendFilters.endYear}년 · ${healthInfectiousTrendSelectedDiseaseLabel}${isHealthTrendLoading ? ' · 로드 중...' : healthInfectiousTrendUpdatedAtLabel ? ` · ${healthInfectiousTrendUpdatedAtLabel} 기준` : ''}`}
                                       </p>
                                     </div>
                                   )}

@@ -209,6 +209,15 @@ export function useDomainLayers() {
             })
           ),
       },
+      {
+        id: 'health-infectious-trends',
+        domain: 'health',
+        name: '기간별 감염 추세',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#14b8a6', radius: 0, opacity: 0 },
+      },
 
       // ── 사회적 약자 (신규 메뉴 placeholder) ──
       {

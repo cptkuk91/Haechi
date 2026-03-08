@@ -5,6 +5,7 @@ import { ChevronRight, PanelRightClose, Radar, Siren, Target } from 'lucide-reac
 import GlassCard from '@/components/ui/GlassCard';
 import DataFeed from '@/components/ui/DataFeed';
 import { HealthFacilityDetailPanel } from '@/components/panels/HealthFacilityDetailPanel';
+import { HealthInfectiousTrendsPanel } from '@/components/panels/HealthInfectiousTrendsPanel';
 import { HealthInfectiousRiskLoadingToast } from '@/components/panels/HealthInfectiousRiskLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
@@ -379,6 +380,8 @@ export default function StatusPanel() {
 
   return (
     <div className="absolute right-4 top-4 z-[70] flex max-w-[calc(100vw-2rem)] flex-col-reverse items-end gap-3 xl:flex-row xl:items-start">
+      <HealthInfectiousTrendsPanel />
+
       {selectedObject && isHealthFacilitySelection(selectedObject) ? (
         <HealthFacilityDetailPanel selectedObject={selectedObject} />
       ) : null}
