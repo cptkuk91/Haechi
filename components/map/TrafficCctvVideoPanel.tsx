@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PIPPanel from '@/components/map/PIPPanel';
 import { useAppStore } from '@/stores/app-store';
 import type { SelectedObject } from '@/types/domain';
@@ -9,8 +9,8 @@ import type { SelectedObject } from '@/types/domain';
 const SOURCE_LABEL = '출처: 경찰청 도시교통정보센터(UTIC)';
 const NO_SIGNAL_MESSAGE = '영상 신호를 수신할 수 없습니다.';
 const UTIC_UNAVAILABLE_MESSAGE = 'UTIC에서 현재 미제공(중단/점검)인 영상입니다.';
-const PLAYBACK_GUARD_TIMEOUT_MS = 30_000;
-const MAX_MANUAL_FALLBACK_ATTEMPTS = 6;
+const IFRAME_LOAD_GUARD_TIMEOUT_MS = 15_000;
+const VIDEO_PLAY_GUARD_TIMEOUT_MS = 30_000;
 
 interface CctvStreamAPIResponse {
   source?: 'mock' | 'upstream';
@@ -18,9 +18,7 @@ interface CctvStreamAPIResponse {
   streamUrl?: string | null;
   streamKind?: 'video' | 'iframe';
   sourceLabel?: string;
-  matchStrategy?: 'cctv-id' | 'coordinate-distance' | 'first-item' | null;
-  fallbackIndex?: number;
-  candidateCount?: number;
+  matchStrategy?: 'cctv-id' | 'coordinate-distance' | null;
   matched?: {
     cctvId?: string | null;
     name?: string | null;
@@ -37,13 +35,8 @@ interface CctvStreamAPIResponse {
 
 interface PlaybackState {
   sessionKey: string;
-  videoStarted: boolean;
+  contentLoaded: boolean;
   playerErrorMessage: string | null;
-}
-
-interface FallbackState {
-  selectionKey: string;
-  attempt: number;
 }
 
 function toText(value: unknown): string | null {
@@ -55,28 +48,39 @@ function toText(value: unknown): string | null {
 function isTrafficControlCctv(selectedObject: SelectedObject | null): selectedObject is SelectedObject {
   if (!selectedObject) return false;
   if (selectedObject.domain !== 'cctv') return false;
-  return toText(selectedObject.properties.source)?.toLowerCase() === 'vworld';
+  const source = toText(selectedObject.properties.source)?.toLowerCase();
+  return source === 'utic' || source === 'vworld';
 }
 
-function getUnavailableDetail(data: CctvStreamAPIResponse | null | undefined): string {
-  if (data?.matchStrategy === 'coordinate-distance') {
-    return '요청 CCTV ID가 직접 매칭되지 않아 인접 CCTV를 대체 표시 중입니다.';
-  }
-  return '해당 영상은 UTIC 제공처에서 일시 중단되었거나 브라우저 재생 형식이 지원되지 않습니다.';
+function getUnavailableDetail(): string {
+  return '직접 매칭된 UTIC 영상만 표시하며, 재생 실패 이력은 이후 지도 조회에서 숨김 처리됩니다.';
+}
+
+function postAvailabilityReport(args: {
+  cctvId: string;
+  playable: boolean;
+  reason: string;
+}) {
+  return fetch('/api/cctv/availability', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(args),
+    keepalive: true,
+  });
 }
 
 export default function TrafficCctvVideoPanel() {
   const selectedObject = useAppStore((s) => s.selectedObject);
+  const queryClient = useQueryClient();
   const [closedSelection, setClosedSelection] = useState<SelectedObject | null>(null);
   const [playbackState, setPlaybackState] = useState<PlaybackState>({
     sessionKey: '',
-    videoStarted: false,
+    contentLoaded: false,
     playerErrorMessage: null,
   });
-  const [fallbackState, setFallbackState] = useState<FallbackState>({
-    selectionKey: '',
-    attempt: 0,
-  });
+  const reportedAvailabilityKeys = useRef<Set<string>>(new Set());
 
   const trafficSelection = useMemo(
     () => (isTrafficControlCctv(selectedObject) ? selectedObject : null),
@@ -85,30 +89,25 @@ export default function TrafficCctvVideoPanel() {
   const selectionKey = trafficSelection
     ? `${trafficSelection.id}:${trafficSelection.coordinates[0].toFixed(6)}:${trafficSelection.coordinates[1].toFixed(6)}`
     : 'none';
-  const fallbackAttempt = fallbackState.selectionKey === selectionKey ? fallbackState.attempt : 0;
 
-  const setFallbackAttempt = (nextAttempt: number) => {
-    const clamped = Math.min(Math.max(nextAttempt, 0), MAX_MANUAL_FALLBACK_ATTEMPTS);
-    setFallbackState((prev) => {
-      if (prev.selectionKey === selectionKey && prev.attempt === clamped) {
-        return prev;
-      }
-      return {
-        selectionKey,
-        attempt: clamped,
-      };
-    });
-  };
+  const reportAvailability = useCallback((playable: boolean, reason: string) => {
+    if (!trafficSelection) return;
+    const key = `${selectionKey}:${playable ? 'ok' : 'fail'}:${reason}`;
+    if (reportedAvailabilityKeys.current.has(key)) return;
+    reportedAvailabilityKeys.current.add(key);
+    void postAvailabilityReport({
+      cctvId: trafficSelection.id,
+      playable,
+      reason,
+    })
+      .then(() => queryClient.invalidateQueries({ queryKey: ['cctv', 'positions'] }))
+      .catch(() => {
+        // Availability cache telemetry should not block playback UI.
+      });
+  }, [queryClient, selectionKey, trafficSelection]);
 
   const streamQuery = useQuery({
-    queryKey: [
-      'cctv',
-      'stream',
-      trafficSelection?.id,
-      trafficSelection?.coordinates[0],
-      trafficSelection?.coordinates[1],
-      fallbackAttempt,
-    ],
+    queryKey: ['cctv', 'stream', trafficSelection?.id],
     queryFn: async ({ signal }) => {
       if (!trafficSelection) {
         return null;
@@ -118,7 +117,6 @@ export default function TrafficCctvVideoPanel() {
         cctvId: trafficSelection.id,
         lng: String(trafficSelection.coordinates[0]),
         lat: String(trafficSelection.coordinates[1]),
-        fallback: String(fallbackAttempt),
       });
 
       const response = await fetch(`/api/cctv/stream?${params.toString()}`, {
@@ -149,20 +147,15 @@ export default function TrafficCctvVideoPanel() {
   const errorMessage = streamUrl
     ? null
     : (toText(streamQuery.data?.error?.message) ?? queryError ?? NO_SIGNAL_MESSAGE);
-  const isCoordinateFallback = streamQuery.data?.matchStrategy === 'coordinate-distance';
-  const candidateCount = streamQuery.data?.candidateCount ?? 0;
-  const activeCandidateIndex = streamQuery.data?.fallbackIndex ?? fallbackAttempt;
-  const hasMoreFallbackCandidates = isCoordinateFallback && candidateCount > activeCandidateIndex + 1;
-  const showFallbackControls = isCoordinateFallback && candidateCount > 1;
   const noSignalTitle = '스트림 연결 실패';
 
-  const playbackSessionKey = `${selectionKey}:${fallbackAttempt}:${streamKind}:${streamUrl ?? 'none'}`;
+  const playbackSessionKey = `${selectionKey}:${streamKind}:${streamUrl ?? 'none'}`;
   const currentPlayback =
     playbackState.sessionKey === playbackSessionKey
       ? playbackState
       : {
           sessionKey: playbackSessionKey,
-          videoStarted: false,
+          contentLoaded: false,
           playerErrorMessage: null,
         };
 
@@ -173,7 +166,7 @@ export default function TrafficCctvVideoPanel() {
           ? prev
           : {
               sessionKey: playbackSessionKey,
-              videoStarted: false,
+              contentLoaded: false,
               playerErrorMessage: null,
             };
       return {
@@ -184,34 +177,57 @@ export default function TrafficCctvVideoPanel() {
     });
   };
 
-  const panelTitle = '교통관제 CCTV';
-  const shouldShowUnavailableNotice = Boolean(streamUrl && currentPlayback.playerErrorMessage);
-  const unavailableDetail = getUnavailableDetail(streamQuery.data);
+  useEffect(() => {
+    if (!trafficSelection) return;
+    if (shouldShowLoading) return;
+    if (streamUrl) return;
+    if (!errorMessage) return;
+    if (isAbortedError) return;
+
+    reportAvailability(false, 'stream-query-failed');
+  }, [errorMessage, isAbortedError, reportAvailability, shouldShowLoading, streamUrl, trafficSelection]);
 
   useEffect(() => {
     if (!streamUrl) return;
     if (currentPlayback.playerErrorMessage) return;
+    if (currentPlayback.contentLoaded) return;
 
-    if (streamKind !== 'video') return;
-    if (currentPlayback.videoStarted) return;
+    const timeoutMs = streamKind === 'iframe'
+      ? IFRAME_LOAD_GUARD_TIMEOUT_MS
+      : VIDEO_PLAY_GUARD_TIMEOUT_MS;
+    const timeoutReason = streamKind === 'iframe'
+      ? 'UTIC iframe 페이지를 불러오지 못했습니다.'
+      : UTIC_UNAVAILABLE_MESSAGE;
 
     const timer = window.setTimeout(() => {
       setPlaybackState((prev) => {
         if (prev.sessionKey !== playbackSessionKey) return prev;
-        if (prev.videoStarted || prev.playerErrorMessage) return prev;
+        if (prev.contentLoaded || prev.playerErrorMessage) return prev;
         return {
           ...prev,
-          playerErrorMessage: UTIC_UNAVAILABLE_MESSAGE,
+          playerErrorMessage: timeoutReason,
         };
       });
-    }, PLAYBACK_GUARD_TIMEOUT_MS);
+      reportAvailability(false, streamKind === 'iframe' ? 'iframe-load-timeout' : 'video-play-timeout');
+    }, timeoutMs);
 
     return () => window.clearTimeout(timer);
-  }, [currentPlayback.playerErrorMessage, currentPlayback.videoStarted, playbackSessionKey, streamKind, streamUrl]);
+  }, [
+    currentPlayback.contentLoaded,
+    currentPlayback.playerErrorMessage,
+    playbackSessionKey,
+    reportAvailability,
+    streamKind,
+    streamUrl,
+  ]);
 
   if (!trafficSelection || trafficSelection === closedSelection) {
     return null;
   }
+
+  const panelTitle = '교통관제 CCTV';
+  const shouldShowUnavailableNotice = Boolean(streamUrl && currentPlayback.playerErrorMessage);
+  const unavailableDetail = getUnavailableDetail();
 
   return (
     <PIPPanel
@@ -237,14 +253,17 @@ export default function TrafficCctvVideoPanel() {
                     className="w-full h-full object-cover"
                     onPlaying={() => {
                       setCurrentPlayback({
-                        videoStarted: true,
+                        contentLoaded: true,
                         playerErrorMessage: null,
                       });
+                      reportAvailability(true, 'video-playing');
                     }}
                     onError={() => {
                       setCurrentPlayback({
+                        contentLoaded: false,
                         playerErrorMessage: UTIC_UNAVAILABLE_MESSAGE,
                       });
+                      reportAvailability(false, 'video-error');
                     }}
                   />
                 )}
@@ -258,13 +277,17 @@ export default function TrafficCctvVideoPanel() {
                     allow="autoplay; fullscreen"
                     onLoad={() => {
                       setCurrentPlayback({
+                        contentLoaded: true,
                         playerErrorMessage: null,
                       });
+                      reportAvailability(true, 'iframe-loaded');
                     }}
                     onError={() => {
                       setCurrentPlayback({
+                        contentLoaded: false,
                         playerErrorMessage: UTIC_UNAVAILABLE_MESSAGE,
                       });
+                      reportAvailability(false, 'iframe-error');
                     }}
                   />
                 )}
@@ -288,24 +311,6 @@ export default function TrafficCctvVideoPanel() {
                         원본 페이지 열기
                       </button>
                     )}
-                    {showFallbackControls && (
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-[9px] text-amber-300/90">
-                          대체 후보 {Math.min(activeCandidateIndex + 1, candidateCount)}/{candidateCount}
-                        </span>
-                        {hasMoreFallbackCandidates && (
-                          <button
-                            type="button"
-                            className="rounded border border-amber-400/60 px-2 py-1 text-[9px] text-amber-200 hover:bg-amber-900/30"
-                            onClick={() => {
-                              setFallbackAttempt(activeCandidateIndex + 1);
-                            }}
-                          >
-                            다음 후보 시도
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )}
                 {!shouldShowLoading && !streamUrl && (
@@ -314,32 +319,14 @@ export default function TrafficCctvVideoPanel() {
                     <span className="max-w-[92%] text-center text-[9px] text-cyan-400">
                       {errorMessage}
                     </span>
-                    {isCoordinateFallback && (
-                      <span className="max-w-[92%] text-center text-[9px] text-amber-300/90">
-                        요청 CCTV를 찾지 못해 인접 CCTV로 대체 조회 중입니다.
-                      </span>
-                    )}
-                    {showFallbackControls && hasMoreFallbackCandidates && (
-                      <button
-                        type="button"
-                        className="rounded border border-amber-400/60 px-2 py-1 text-[9px] text-amber-200 hover:bg-amber-900/30"
-                        onClick={() => {
-                          setFallbackAttempt(activeCandidateIndex + 1);
-                        }}
-                      >
-                        다음 후보 시도 ({Math.min(activeCandidateIndex + 2, candidateCount)}/{candidateCount})
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
               <div className="px-2 py-1 border-t border-cyan-900/40 text-[9px] text-cyan-300/90 tracking-wide">
                 <div>{sourceLabel}</div>
-                {isCoordinateFallback && (
-                  <div className="text-[8px] text-amber-300/90">
-                    매칭 방식: 인접 CCTV 대체 ({Math.min(activeCandidateIndex + 1, candidateCount)}/{candidateCount})
-                  </div>
-                )}
+                <div className="text-[8px] text-cyan-400/90">
+                  매칭 방식: UTIC 직접 매칭
+                </div>
               </div>
             </div>
           ),
