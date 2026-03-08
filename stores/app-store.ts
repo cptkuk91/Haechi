@@ -85,6 +85,59 @@ export interface HealthInfectiousTrendData {
   summary: HealthInfectiousTrendSummary;
 }
 
+export interface HealthInfectiousDistributionFilters {
+  year: number | null;
+  metric: HealthInfectiousRiskMetric;
+  disease: string | null;
+}
+
+export type HealthInfectiousDistributionDiseaseOption = HealthInfectiousRiskDiseaseOption;
+
+export interface HealthInfectiousDistributionMeta {
+  availableYears: number[];
+  selectedYear: number | null;
+  diseaseOptions: HealthInfectiousDistributionDiseaseOption[];
+  updatedAt: string | null;
+}
+
+export interface HealthInfectiousDistributionRow {
+  label: string;
+  value: number;
+  barPct: number;
+  group: string | null;
+}
+
+export interface HealthInfectiousDistributionSummary {
+  diseaseCount: number;
+  topDiseaseName: string | null;
+  topDiseaseValue: number | null;
+  selectedDiseaseName: string | null;
+  selectedDiseaseValue: number | null;
+  peakAgeLabel: string | null;
+  peakAgeValue: number | null;
+  peakGenderLabel: string | null;
+  peakGenderValue: number | null;
+  deathTotal: number | null;
+  deathTopDiseaseName: string | null;
+  deathTopDiseaseValue: number | null;
+}
+
+export interface HealthInfectiousDistributionData {
+  layerKind: 'infectious-distribution';
+  sourceLabel: string;
+  year: number;
+  yearLabel: string;
+  metric: HealthInfectiousRiskMetric;
+  metricLabel: string;
+  selectedDisease: string | null;
+  selectedDiseaseLabel: string | null;
+  topDiseases: HealthInfectiousDistributionRow[];
+  ageBreakdown: HealthInfectiousDistributionRow[];
+  genderBreakdown: HealthInfectiousDistributionRow[];
+  deathBreakdown: HealthInfectiousDistributionRow[];
+  summary: HealthInfectiousDistributionSummary;
+}
+
 export interface MapBounds {
   west: number;
   south: number;
@@ -111,6 +164,9 @@ interface AppStore {
   healthInfectiousTrendFilters: HealthInfectiousTrendFilters;
   healthInfectiousTrendMeta: HealthInfectiousTrendMeta;
   healthInfectiousTrendData: HealthInfectiousTrendData | null;
+  healthInfectiousDistributionFilters: HealthInfectiousDistributionFilters;
+  healthInfectiousDistributionMeta: HealthInfectiousDistributionMeta;
+  healthInfectiousDistributionData: HealthInfectiousDistributionData | null;
   mapBounds: MapBounds | null;
   pipelineErrors: Set<string>;
 
@@ -143,6 +199,9 @@ interface AppStore {
   setHealthInfectiousTrendFilters: (filters: Partial<HealthInfectiousTrendFilters>) => void;
   setHealthInfectiousTrendMeta: (meta: HealthInfectiousTrendMeta) => void;
   setHealthInfectiousTrendData: (data: HealthInfectiousTrendData | null) => void;
+  setHealthInfectiousDistributionFilters: (filters: Partial<HealthInfectiousDistributionFilters>) => void;
+  setHealthInfectiousDistributionMeta: (meta: HealthInfectiousDistributionMeta) => void;
+  setHealthInfectiousDistributionData: (data: HealthInfectiousDistributionData | null) => void;
   setMapBounds: (bounds: MapBounds | null) => void;
   setPipelineErrors: (errors: Set<string>) => void;
 
@@ -205,6 +264,22 @@ function buildDefaultHealthInfectiousTrendMeta(): HealthInfectiousTrendMeta {
   };
 }
 
+const DEFAULT_HEALTH_INFECTIOUS_DISTRIBUTION_FILTERS: HealthInfectiousDistributionFilters = {
+  year: null,
+  metric: 'count',
+  disease: null,
+};
+
+function buildDefaultHealthInfectiousDistributionMeta(): HealthInfectiousDistributionMeta {
+  const currentYear = new Date().getFullYear();
+  return {
+    availableYears: Array.from({ length: DEFAULT_HEALTH_INFECTIOUS_RISK_YEAR_RANGE + 1 }, (_value, index) => currentYear - index),
+    selectedYear: null,
+    diseaseOptions: [],
+    updatedAt: null,
+  };
+}
+
 function sanitizeCctvMaxDisplayCount(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_CCTV_MAX_DISPLAY_COUNT;
   const normalized = Math.floor(value);
@@ -231,6 +306,9 @@ export const useAppStore = create<AppStore>((set) => ({
   healthInfectiousTrendFilters: buildDefaultHealthInfectiousTrendFilters(),
   healthInfectiousTrendMeta: buildDefaultHealthInfectiousTrendMeta(),
   healthInfectiousTrendData: null,
+  healthInfectiousDistributionFilters: { ...DEFAULT_HEALTH_INFECTIOUS_DISTRIBUTION_FILTERS },
+  healthInfectiousDistributionMeta: buildDefaultHealthInfectiousDistributionMeta(),
+  healthInfectiousDistributionData: null,
   mapBounds: null,
   pipelineErrors: new Set<string>(),
 
@@ -484,6 +562,43 @@ export const useAppStore = create<AppStore>((set) => ({
 
   setHealthInfectiousTrendData: (data) =>
     set({ healthInfectiousTrendData: data }),
+
+  setHealthInfectiousDistributionFilters: (filters) =>
+    set((s) => {
+      const next: HealthInfectiousDistributionFilters = {
+        ...s.healthInfectiousDistributionFilters,
+        ...filters,
+      };
+      const unchanged =
+        next.year === s.healthInfectiousDistributionFilters.year
+        && next.metric === s.healthInfectiousDistributionFilters.metric
+        && next.disease === s.healthInfectiousDistributionFilters.disease;
+      return unchanged ? s : { healthInfectiousDistributionFilters: next };
+    }),
+
+  setHealthInfectiousDistributionMeta: (meta) =>
+    set((s) => {
+      const prev = s.healthInfectiousDistributionMeta;
+      const sameYears =
+        prev.availableYears.length === meta.availableYears.length
+        && prev.availableYears.every((year, index) => year === meta.availableYears[index]);
+      const sameDiseases =
+        prev.diseaseOptions.length === meta.diseaseOptions.length
+        && prev.diseaseOptions.every((option, index) => (
+          option.value === meta.diseaseOptions[index]?.value
+          && option.label === meta.diseaseOptions[index]?.label
+          && option.group === meta.diseaseOptions[index]?.group
+        ));
+      const unchanged =
+        sameYears
+        && sameDiseases
+        && prev.selectedYear === meta.selectedYear
+        && prev.updatedAt === meta.updatedAt;
+      return unchanged ? s : { healthInfectiousDistributionMeta: meta };
+    }),
+
+  setHealthInfectiousDistributionData: (data) =>
+    set({ healthInfectiousDistributionData: data }),
 
   setMapBounds: (bounds) =>
     set((s) => {

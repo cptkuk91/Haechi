@@ -45,7 +45,7 @@ export default function IntroScreen({ visible }: IntroScreenProps) {
               transition={{ duration: 0.6, delay: 0.8 }}
               className="text-sm tracking-[0.4em] text-cyan-500/60 uppercase font-mono"
             >
-              TENMO 3D MAP KOREA
+              HAECHI PROJECT
             </motion.p>
             <motion.div
               initial={{ opacity: 0 }}

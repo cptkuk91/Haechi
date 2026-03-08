@@ -26,11 +26,11 @@ export default function HudHeader() {
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] animate-pulse" />
           <h1 className="text-2xl font-bold tracking-[0.3em] text-white drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]">
-            TENMO
+            HAECHI
           </h1>
         </div>
         <div className="text-[9px] mt-2 text-cyan-700/80 tracking-widest uppercase space-y-0.5">
-          <p>3D INTEGRATED CONTROL // KOREA</p>
+          <p>NATIONAL INTEGRATED CONTROL</p>
           <p>
             LAT {camera.latitude.toFixed(3)} LNG {camera.longitude.toFixed(3)} Z{camera.zoom.toFixed(1)}
           </p>

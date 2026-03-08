@@ -14,6 +14,7 @@ import {
   type PublicAPIResponse,
 } from '@/hooks/usePublicAPI';
 import { useHealthEmergencyRoomsLayer } from '@/hooks/useHealthEmergencyRoomsLayer';
+import { useHealthInfectiousDistributionLayer } from '@/hooks/useHealthInfectiousDistributionLayer';
 import { useHealthInfectiousRiskSidoLayer } from '@/hooks/useHealthInfectiousRiskSidoLayer';
 import { useHealthInfectiousTrendsLayer } from '@/hooks/useHealthInfectiousTrendsLayer';
 import { useHealthTraumaCentersLayer } from '@/hooks/useHealthTraumaCentersLayer';
@@ -33,6 +34,7 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'health-trauma-centers',
   'health-infectious-risk-sido',
   'health-infectious-trends',
+  'health-infectious-distribution',
   'transit-crowd-density',
   'transit-subway-passengers',
   'transit-bus-passengers',
@@ -59,6 +61,7 @@ export default function Team2LayerBootstrap() {
   useHealthTraumaCentersLayer();
   useHealthInfectiousRiskSidoLayer();
   useHealthInfectiousTrendsLayer();
+  useHealthInfectiousDistributionLayer();
 
   const trafficQuery = useTrafficData();
   const weatherQuery = useWeatherData();

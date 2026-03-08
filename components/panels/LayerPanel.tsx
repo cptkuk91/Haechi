@@ -74,6 +74,10 @@ export default function LayerPanel() {
     healthInfectiousRiskFilters,
     healthInfectiousRiskMeta,
     setHealthInfectiousRiskFilters,
+    healthInfectiousDistributionFilters,
+    healthInfectiousDistributionMeta,
+    healthInfectiousDistributionData,
+    setHealthInfectiousDistributionFilters,
     healthInfectiousTrendFilters,
     healthInfectiousTrendMeta,
     setHealthInfectiousTrendFilters,
@@ -83,8 +87,10 @@ export default function LayerPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cctvCustomInput, setCctvCustomInput] = useState(String(cctvMaxDisplayCount));
   const [isHealthRiskPending, startHealthRiskTransition] = useTransition();
+  const [isHealthDistributionPending, startHealthDistributionTransition] = useTransition();
   const [isHealthTrendPending, startHealthTrendTransition] = useTransition();
   const healthRiskFetchCount = useIsFetching({ queryKey: ['health', 'infectious-risk-sido'] });
+  const healthDistributionFetchCount = useIsFetching({ queryKey: ['health', 'infectious-distribution'] });
   const healthTrendFetchCount = useIsFetching({ queryKey: ['health', 'infectious-trends'] });
 
   const showRestrictedLayerToast = () => {
@@ -173,6 +179,30 @@ export default function LayerPanel() {
   const updateHealthInfectiousRiskFilters = (next: Partial<typeof healthInfectiousRiskFilters>) => {
     startHealthRiskTransition(() => {
       setHealthInfectiousRiskFilters(next);
+    });
+  };
+  const healthInfectiousDistributionSelectedDiseaseLabel = useMemo(() => {
+    if (healthInfectiousDistributionFilters.disease) return healthInfectiousDistributionFilters.disease;
+    return healthInfectiousDistributionData?.selectedDiseaseLabel
+      ? `자동: ${healthInfectiousDistributionData.selectedDiseaseLabel}`
+      : '자동 선택';
+  }, [healthInfectiousDistributionData?.selectedDiseaseLabel, healthInfectiousDistributionFilters.disease]);
+  const healthInfectiousDistributionLatestYearLabel = useMemo(() => {
+    return healthInfectiousDistributionMeta.selectedYear ? `최신 (${healthInfectiousDistributionMeta.selectedYear}년)` : '최신';
+  }, [healthInfectiousDistributionMeta.selectedYear]);
+  const healthInfectiousDistributionMetricLabel = useMemo(() => {
+    return healthInfectiousDistributionFilters.metric === 'count' ? '발생건수' : '10만명당 발생률';
+  }, [healthInfectiousDistributionFilters.metric]);
+  const healthInfectiousDistributionUpdatedAtLabel = useMemo(() => {
+    if (!healthInfectiousDistributionMeta.updatedAt) return null;
+    const parsed = new Date(healthInfectiousDistributionMeta.updatedAt);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toLocaleTimeString('ko-KR', { hour12: false });
+  }, [healthInfectiousDistributionMeta.updatedAt]);
+  const isHealthDistributionLoading = isHealthDistributionPending || healthDistributionFetchCount > 0;
+  const updateHealthInfectiousDistributionFilters = (next: Partial<typeof healthInfectiousDistributionFilters>) => {
+    startHealthDistributionTransition(() => {
+      setHealthInfectiousDistributionFilters(next);
     });
   };
   const healthInfectiousTrendSelectedDiseaseLabel = useMemo(() => {
@@ -372,6 +402,8 @@ export default function LayerPanel() {
                                         ? '시도별 감염 위험도 (완료)'
                                       : layer.id === 'health-infectious-trends' && layerDataSource[layer.id] === 'upstream'
                                         ? '기간별 감염 추세 (완료)'
+                                      : layer.id === 'health-infectious-distribution' && layerDataSource[layer.id] === 'upstream'
+                                        ? '감염병 상세 분포 (완료)'
                                       : layer.id === 'vulnerable-missing-persons' && layerDataSource[layer.id] === 'upstream'
                                         ? '실종 발생 위치 (완료)'
                                       : layer.id === 'vulnerable-elderly-welfare-facilities' && layerDataSource[layer.id] === 'upstream'
@@ -624,6 +656,86 @@ export default function LayerPanel() {
 
                                       <p className="px-1 text-[9px] tracking-wider text-cyan-200/80 font-mono">
                                         {`${healthInfectiousTrendPeriodLabel} · ${healthInfectiousTrendFilters.startYear}년-${healthInfectiousTrendFilters.endYear}년 · ${healthInfectiousTrendSelectedDiseaseLabel}${isHealthTrendLoading ? ' · 로드 중...' : healthInfectiousTrendUpdatedAtLabel ? ` · ${healthInfectiousTrendUpdatedAtLabel} 기준` : ''}`}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {layer.id === 'health-infectious-distribution' && layer.visible && (
+                                    <div className="px-2 pb-2 space-y-1.5">
+                                      <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                        <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
+                                          Year
+                                        </span>
+                                        <select
+                                          value={healthInfectiousDistributionFilters.year ?? 'latest'}
+                                          onChange={(event) => {
+                                            const raw = event.target.value;
+                                            updateHealthInfectiousDistributionFilters({
+                                              year: raw === 'latest' ? null : Number(raw),
+                                            });
+                                          }}
+                                          className="min-w-[110px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                        >
+                                          <option value="latest">{healthInfectiousDistributionLatestYearLabel}</option>
+                                          {healthInfectiousDistributionMeta.availableYears.map((year) => (
+                                            <option key={year} value={year}>
+                                              {year}년
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+
+                                      <label className="flex items-center justify-between gap-2 rounded-md border border-cyan-500/25 bg-cyan-900/10 px-2 py-1.5">
+                                        <span className="text-[10px] tracking-wider text-cyan-50 font-mono">
+                                          Disease
+                                        </span>
+                                        <select
+                                          value={healthInfectiousDistributionFilters.disease ?? 'auto'}
+                                          onChange={(event) => {
+                                            const raw = event.target.value;
+                                            updateHealthInfectiousDistributionFilters({
+                                              disease: raw === 'auto' ? null : raw,
+                                            });
+                                          }}
+                                          className="min-w-[110px] max-w-[132px] rounded border border-cyan-400/40 bg-[#0b1f31] px-1.5 py-1 text-[10px] text-cyan-50 font-mono focus:outline-none focus:border-cyan-200"
+                                        >
+                                          <option value="auto">자동 선택</option>
+                                          {healthInfectiousDistributionMeta.diseaseOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                              {option.group ? `${option.label} (${option.group})` : option.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+
+                                      <div className="rounded-md border border-cyan-500/25 bg-cyan-900/10 p-1">
+                                        <div className="grid grid-cols-2 gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => updateHealthInfectiousDistributionFilters({ metric: 'count' })}
+                                            className={`rounded px-2 py-1 text-[10px] font-mono transition-colors ${
+                                              healthInfectiousDistributionFilters.metric === 'count'
+                                                ? 'bg-cyan-300 text-[#04121e]'
+                                                : 'bg-[#0b1f31] text-cyan-100 hover:bg-cyan-900/40'
+                                            }`}
+                                          >
+                                            발생건수
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => updateHealthInfectiousDistributionFilters({ metric: 'incidence' })}
+                                            className={`rounded px-2 py-1 text-[10px] font-mono transition-colors ${
+                                              healthInfectiousDistributionFilters.metric === 'incidence'
+                                                ? 'bg-cyan-300 text-[#04121e]'
+                                                : 'bg-[#0b1f31] text-cyan-100 hover:bg-cyan-900/40'
+                                            }`}
+                                          >
+                                            10만명당
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      <p className="px-1 text-[9px] tracking-wider text-cyan-200/80 font-mono">
+                                        {`${healthInfectiousDistributionFilters.year === null ? healthInfectiousDistributionLatestYearLabel : `${healthInfectiousDistributionFilters.year}년`} · ${healthInfectiousDistributionSelectedDiseaseLabel} · ${healthInfectiousDistributionMetricLabel}${isHealthDistributionLoading ? ' · 로드 중...' : healthInfectiousDistributionUpdatedAtLabel ? ` · ${healthInfectiousDistributionUpdatedAtLabel} 기준` : ''}`}
                                       </p>
                                     </div>
                                   )}

@@ -218,6 +218,15 @@ export function useDomainLayers() {
         data: emptyFeatureCollection(),
         style: { color: '#14b8a6', radius: 0, opacity: 0 },
       },
+      {
+        id: 'health-infectious-distribution',
+        domain: 'health',
+        name: '감염병 상세 분포',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#f97316', radius: 0, opacity: 0 },
+      },
 
       // ── 사회적 약자 (신규 메뉴 placeholder) ──
       {
