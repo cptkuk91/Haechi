@@ -118,6 +118,7 @@ function classifyCapacity(occupancyPct: number | null): {
 function isHealthFacilitySelection(selectedObject: SelectedObject): boolean {
   if (selectedObject.domain !== 'health') return false;
   const properties = selectedObject.properties;
+  if (properties.layerKind === 'pharmacy') return false;
   return (
     typeof properties.hpid === 'string'
     || typeof properties.facilityCategory === 'string'

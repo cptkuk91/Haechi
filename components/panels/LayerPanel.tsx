@@ -8,6 +8,7 @@ import { useAppStore } from '@/stores/app-store';
 import { DOMAIN_REGISTRY } from '@/types/domain';
 import { DOMAIN_ICONS } from '@/lib/domain-icons';
 import { getHealthAedFeatureLimitForZoom } from '@/lib/health-aed';
+import { getHealthPharmacyFeatureLimitForZoom } from '@/lib/health-pharmacy';
 import type { Alert, LayerConfig } from '@/types/domain';
 
 const CCTV_MAX_DISPLAY_OPTIONS = [100, 500, 1000, 2000, 5000, 10000, 20000] as const;
@@ -93,6 +94,7 @@ export default function LayerPanel() {
   const [isHealthTrendPending, startHealthTrendTransition] = useTransition();
   const healthRiskFetchCount = useIsFetching({ queryKey: ['health', 'infectious-risk-sido'] });
   const healthAedFetchCount = useIsFetching({ queryKey: ['health', 'aed'] });
+  const healthPharmacyFetchCount = useIsFetching({ queryKey: ['health', 'pharmacy'] });
   const healthDistributionFetchCount = useIsFetching({ queryKey: ['health', 'infectious-distribution'] });
   const healthTrendFetchCount = useIsFetching({ queryKey: ['health', 'infectious-trends'] });
 
@@ -180,6 +182,7 @@ export default function LayerPanel() {
   }, [healthInfectiousRiskMeta.updatedAt]);
   const isHealthRiskLoading = isHealthRiskPending || healthRiskFetchCount > 0;
   const isHealthAedLoading = healthAedFetchCount > 0;
+  const isHealthPharmacyLoading = healthPharmacyFetchCount > 0;
   const updateHealthInfectiousRiskFilters = (next: Partial<typeof healthInfectiousRiskFilters>) => {
     startHealthRiskTransition(() => {
       setHealthInfectiousRiskFilters(next);
@@ -227,6 +230,9 @@ export default function LayerPanel() {
   const isHealthTrendLoading = isHealthTrendPending || healthTrendFetchCount > 0;
   const healthAedFeatureLimit = useMemo(() => {
     return getHealthAedFeatureLimitForZoom(camera.zoom);
+  }, [camera.zoom]);
+  const healthPharmacyFeatureLimit = useMemo(() => {
+    return getHealthPharmacyFeatureLimitForZoom(camera.zoom);
   }, [camera.zoom]);
   const updateHealthInfectiousTrendFilters = (next: Partial<typeof healthInfectiousTrendFilters>) => {
     startHealthTrendTransition(() => {
@@ -407,6 +413,8 @@ export default function LayerPanel() {
                                         ? '외상센터 (완료)'
                                       : layer.id === 'health-aed-locations' && layerDataSource[layer.id] === 'upstream'
                                         ? '자동심장충격기(AED) (완료)'
+                                      : layer.id === 'health-pharmacy-locations' && layerDataSource[layer.id] === 'upstream'
+                                        ? '약국 위치 (완료)'
                                       : layer.id === 'health-infectious-risk-sido' && layerDataSource[layer.id] === 'upstream'
                                         ? '시도별 감염 위험도 (완료)'
                                       : layer.id === 'health-infectious-trends' && layerDataSource[layer.id] === 'upstream'
@@ -559,6 +567,13 @@ export default function LayerPanel() {
                                     <div className="px-2 pb-2">
                                       <div className="rounded-md border border-orange-400/20 bg-orange-500/8 px-2.5 py-2 text-[10px] tracking-wider text-orange-100/85 font-mono">
                                         {`현재 줌 기준 상위 ${healthAedFeatureLimit.toLocaleString('ko-KR')}개 좌표만 지도에 표시${isHealthAedLoading ? ' · 로드 중...' : ''}`}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {layer.id === 'health-pharmacy-locations' && layer.visible && (
+                                    <div className="px-2 pb-2">
+                                      <div className="rounded-md border border-sky-400/20 bg-sky-500/8 px-2.5 py-2 text-[10px] tracking-wider text-sky-100/85 font-mono">
+                                        {`현재 줌 기준 상위 ${healthPharmacyFeatureLimit.toLocaleString('ko-KR')}개 약국만 지도에 표시${isHealthPharmacyLoading ? ' · 로드 중...' : ''}`}
                                       </div>
                                     </div>
                                   )}

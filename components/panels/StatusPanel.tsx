@@ -9,6 +9,7 @@ import { HealthFacilityDetailPanel } from '@/components/panels/HealthFacilityDet
 import { HealthInfectiousDistributionPanel } from '@/components/panels/HealthInfectiousDistributionPanel';
 import { HealthInfectiousTrendsPanel } from '@/components/panels/HealthInfectiousTrendsPanel';
 import { HealthInfectiousRiskLoadingToast } from '@/components/panels/HealthInfectiousRiskLoadingToast';
+import { HealthPharmacyLoadingToast } from '@/components/panels/HealthPharmacyLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
 function formatValue(value: unknown): string {
@@ -62,6 +63,7 @@ function isHighwayTollgateSelection(selectedObject: { domain: string; properties
 function isHealthFacilitySelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
   if (selectedObject.domain !== 'health') return false;
   const properties = selectedObject.properties;
+  if (properties.layerKind === 'pharmacy') return false;
   return (
     typeof properties.hpid === 'string'
     || typeof properties.facilityCategory === 'string'
@@ -77,6 +79,16 @@ function isHealthAedSelection(selectedObject: { domain: string; properties: Reco
     || typeof properties.installationPlace === 'string'
     || typeof properties.organization === 'string'
     || typeof properties.serialNumber === 'string'
+  );
+}
+
+function isHealthPharmacySelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'health') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'pharmacy'
+    || typeof properties.todayHours === 'string'
+    || typeof properties.operatingStatusLabel === 'string'
   );
 }
 
@@ -170,6 +182,46 @@ function buildHealthAedEntries(properties: Record<string, unknown>): Array<[stri
   }
   if (serialNumber) {
     entries.push(['제조번호', serialNumber]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
+function buildHealthPharmacyEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'dutyName']);
+  const address = pickFirstString(properties, ['address', 'dutyAddr']);
+  const phone = pickFirstString(properties, ['phone', 'dutyTel1']);
+  const hpid = pickFirstString(properties, ['hpid']);
+  const operatingStatusLabel = pickFirstString(properties, ['operatingStatusLabel']);
+  const operatingDayLabel = pickFirstString(properties, ['operatingDayLabel']);
+  const todayHours = pickFirstString(properties, ['todayHours']);
+  const notes = pickFirstString(properties, ['notes', 'dutyEtc']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+
+  const entries: Array<[string, unknown]> = [
+    ['약국명', name ?? '-'],
+  ];
+
+  if (operatingStatusLabel) {
+    entries.push(['운영상태', operatingStatusLabel]);
+  }
+  if (todayHours) {
+    entries.push(['오늘 운영', operatingDayLabel ? `${operatingDayLabel} ${todayHours}` : todayHours]);
+  }
+  if (address) {
+    entries.push(['주소', address]);
+  }
+  if (phone) {
+    entries.push(['대표전화', phone]);
+  }
+  if (hpid) {
+    entries.push(['HPID', hpid]);
+  }
+  if (notes) {
+    entries.push(['비고', notes]);
   }
   if (source) {
     entries.push(['소스', source]);
@@ -402,6 +454,9 @@ export default function StatusPanel() {
     if (isHealthInfectiousRiskSelection(selectedObject)) {
       return buildHealthInfectiousRiskEntries(selectedObject.properties);
     }
+    if (isHealthPharmacySelection(selectedObject)) {
+      return buildHealthPharmacyEntries(selectedObject.properties);
+    }
     if (isHealthAedSelection(selectedObject)) {
       return buildHealthAedEntries(selectedObject.properties);
     }
@@ -453,6 +508,7 @@ export default function StatusPanel() {
       <aside className="relative flex h-[calc(100vh-2rem)] w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 pointer-events-auto">
         <div className="pointer-events-none absolute left-0 right-0 -top-16 z-[75] flex flex-col gap-3 xl:left-auto xl:right-[calc(100%+0.75rem)] xl:top-3 xl:w-[280px]">
           <HealthInfectiousRiskLoadingToast />
+          <HealthPharmacyLoadingToast />
           <HealthAedLoadingToast />
         </div>
 

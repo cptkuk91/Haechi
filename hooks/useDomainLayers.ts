@@ -210,6 +210,23 @@ export function useDomainLayers() {
           ),
       },
       {
+        id: 'health-pharmacy-locations',
+        domain: 'health',
+        name: '약국 위치',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#38bdf8', radius: 440, opacity: 0.9 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'health-pharmacy-locations',
+              domain: 'health',
+              type: 'marker',
+            })
+          ),
+      },
+      {
         id: 'health-infectious-risk-sido',
         domain: 'health',
         name: '시도별 감염 위험도',

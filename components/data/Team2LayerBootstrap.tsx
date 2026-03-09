@@ -18,6 +18,7 @@ import { useHealthEmergencyRoomsLayer } from '@/hooks/useHealthEmergencyRoomsLay
 import { useHealthInfectiousDistributionLayer } from '@/hooks/useHealthInfectiousDistributionLayer';
 import { useHealthInfectiousRiskSidoLayer } from '@/hooks/useHealthInfectiousRiskSidoLayer';
 import { useHealthInfectiousTrendsLayer } from '@/hooks/useHealthInfectiousTrendsLayer';
+import { useHealthPharmacyLayer } from '@/hooks/useHealthPharmacyLayer';
 import { useHealthTraumaCentersLayer } from '@/hooks/useHealthTraumaCentersLayer';
 import { usePolling } from '@/hooks/usePolling';
 import { toSelectedObjectFromFeature } from '@/lib/selected-object';
@@ -34,6 +35,7 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'health-emergency-room-location',
   'health-trauma-centers',
   'health-aed-locations',
+  'health-pharmacy-locations',
   'health-infectious-risk-sido',
   'health-infectious-trends',
   'health-infectious-distribution',
@@ -62,6 +64,7 @@ export default function Team2LayerBootstrap() {
   useHealthEmergencyRoomsLayer();
   useHealthTraumaCentersLayer();
   useHealthAedLayer();
+  useHealthPharmacyLayer();
   useHealthInfectiousRiskSidoLayer();
   useHealthInfectiousTrendsLayer();
   useHealthInfectiousDistributionLayer();
