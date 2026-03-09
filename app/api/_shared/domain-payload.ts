@@ -415,46 +415,9 @@ export function buildDomainPayload(domain: Team2DomainRoute): DomainPayload {
       return {
         domain,
         updatedAt,
-        layers: [
-          {
-            id: 'crime-risk-heatmap',
-            domain: 'crime',
-            name: '범죄 위험 히트맵',
-            type: 'heatmap',
-            visible: true,
-            style: { radius: 36 },
-            data: featureCollection([
-              point('crime-seoul-hongdae', [126.924, 37.557], { weight: 0.85, period: 'night' }),
-              point('crime-seoul-gangnam', [127.028, 37.497], { weight: 0.91, period: 'night' }),
-              point('crime-busan-seomyeon', [129.06, 35.155], { weight: 0.74, period: 'evening' }),
-            ]),
-          },
-          {
-            id: 'crime-patrol-route',
-            domain: 'crime',
-            name: '순찰 집중선',
-            type: 'line',
-            visible: false,
-            style: { color: '#f59e0b', lineWidth: 3 },
-            data: featureCollection([
-              line(
-                'patrol-gangnam',
-                [
-                  [127.02, 37.505],
-                  [127.028, 37.498],
-                  [127.035, 37.49],
-                ],
-                { shift: 'night' }
-              ),
-            ]),
-          },
-        ],
+        layers: [],
         alerts: [],
-        metrics: [
-          { label: '고위험 클러스터', value: '6', severity: 'warning' },
-          { label: '순찰 노드', value: '42' },
-          { label: '평균 대응시간', value: '4m 20s' },
-        ],
+        metrics: [],
       };
 
     case 'health':

@@ -23,6 +23,7 @@ const RESTRICTED_LAYER_IDS = new Set([
   'cyber-attacks',
 ]);
 const PERSISTENT_EMPTY_DOMAIN_IDS = new Set([
+  'crime',
   'health',
 ]);
 const RESTRICTED_LAYER_ALERT_ID = 'alert-restricted-cyber-access';
@@ -385,7 +386,7 @@ export default function LayerPanel() {
                           <div className="pl-6 space-y-0.5 pb-1">
                             {domain.layers.length === 0 ? (
                               <div className="rounded-md border border-cyan-500/20 bg-cyan-900/10 px-2.5 py-2 text-[10px] tracking-wider text-cyan-200/75 font-mono">
-                                등록된 레이어 없음
+                                {domain.id === 'crime' ? '작업 대기' : '등록된 레이어 없음'}
                               </div>
                             ) : (
                               domain.layers.map((layer) => (
