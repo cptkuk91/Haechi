@@ -10,6 +10,7 @@ import { HealthInfectiousDistributionPanel } from '@/components/panels/HealthInf
 import { HealthInfectiousTrendsPanel } from '@/components/panels/HealthInfectiousTrendsPanel';
 import { HealthInfectiousRiskLoadingToast } from '@/components/panels/HealthInfectiousRiskLoadingToast';
 import { HealthPharmacyLoadingToast } from '@/components/panels/HealthPharmacyLoadingToast';
+import { MaritimeBuoyLoadingToast } from '@/components/panels/MaritimeBuoyLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
 function formatValue(value: unknown): string {
@@ -99,6 +100,16 @@ function isHealthInfectiousRiskSelection(selectedObject: { domain: string; prope
     properties.layerKind === 'infectious-risk-sido'
     || typeof properties.riskMetric === 'string'
     || typeof properties.provinceRank === 'number'
+  );
+}
+
+function isMaritimeBuoySelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'maritime') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'maritime-buoy'
+    || typeof properties.blfrNo === 'string'
+    || typeof properties.lightProperty === 'string'
   );
 }
 
@@ -298,6 +309,49 @@ function buildHealthInfectiousRiskEntries(properties: Record<string, unknown>): 
   return entries;
 }
 
+function buildMaritimeBuoyEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'buoyKr']);
+  const englishName = pickFirstString(properties, ['buoyEn']);
+  const blfrNo = pickFirstString(properties, ['blfrNo']);
+  const buoyType = pickFirstString(properties, ['buoyType']);
+  const seaName = pickFirstString(properties, ['seaName']);
+  const kind = pickFirstString(properties, ['kind']);
+  const lightProperty = pickFirstString(properties, ['lightProperty']);
+  const remark = pickFirstString(properties, ['remark']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+
+  const entries: Array<[string, unknown]> = [
+    ['표지명', name ?? '-'],
+  ];
+
+  if (englishName) {
+    entries.push(['영문명', englishName]);
+  }
+  if (blfrNo) {
+    entries.push(['등대번호', blfrNo]);
+  }
+  if (buoyType) {
+    entries.push(['표지구분', buoyType]);
+  }
+  if (seaName) {
+    entries.push(['연안구분', seaName]);
+  }
+  if (kind) {
+    entries.push(['표지종류', kind]);
+  }
+  if (lightProperty) {
+    entries.push(['등질', lightProperty]);
+  }
+  if (remark) {
+    entries.push(['비고', remark]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
 function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
   const name = pickFirstString(properties, ['name', 'fac_nam']);
   const facilityType = pickFirstString(properties, ['facilityType', 'category', 'cat_nam']);
@@ -454,6 +508,9 @@ export default function StatusPanel() {
     if (isHealthInfectiousRiskSelection(selectedObject)) {
       return buildHealthInfectiousRiskEntries(selectedObject.properties);
     }
+    if (isMaritimeBuoySelection(selectedObject)) {
+      return buildMaritimeBuoyEntries(selectedObject.properties);
+    }
     if (isHealthPharmacySelection(selectedObject)) {
       return buildHealthPharmacyEntries(selectedObject.properties);
     }
@@ -510,6 +567,7 @@ export default function StatusPanel() {
           <HealthInfectiousRiskLoadingToast />
           <HealthPharmacyLoadingToast />
           <HealthAedLoadingToast />
+          <MaritimeBuoyLoadingToast />
         </div>
 
         <GlassCard

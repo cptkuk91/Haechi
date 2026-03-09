@@ -2,7 +2,6 @@
 
 import { useDomainLayers } from '@/hooks/useDomainLayers';
 import { useAircraftLayer } from '@/hooks/useAircraftLayer';
-import { useShipLayer } from '@/hooks/useShipLayer';
 import { useCyberDefenseLayer } from '@/hooks/useCyberDefenseLayer';
 import { useTransitCitydataLayers } from '@/hooks/useTransitCitydataLayers';
 import { useTrafficFlowLayer } from '@/hooks/useTrafficFlowLayer';
@@ -21,11 +20,12 @@ import { useDisabledFacilitiesLayer } from '@/hooks/useDisabledFacilitiesLayer';
 import { useMulticulturalSupportCentersLayer } from '@/hooks/useMulticulturalSupportCentersLayer';
 import { usePublicFacilitySafetyLayer } from '@/hooks/usePublicFacilitySafetyLayer';
 import { useHighwayTollgatesLayer } from '@/hooks/useHighwayTollgatesLayer';
+import { useMaritimeBuoyLayer } from '@/hooks/useMaritimeBuoyLayer';
 
 export default function LayerBootstrap() {
   useDomainLayers();
   useAircraftLayer();
-  useShipLayer();
+  useMaritimeBuoyLayer();
   useCyberDefenseLayer();
   useTransitCitydataLayers();
   useTrafficFlowLayer();

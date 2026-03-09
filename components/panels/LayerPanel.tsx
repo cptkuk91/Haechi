@@ -416,6 +416,8 @@ export default function LayerPanel() {
                                         ? '자동심장충격기(AED) (완료)'
                                       : layer.id === 'health-pharmacy-locations' && layerDataSource[layer.id] === 'upstream'
                                         ? '약국 위치 (완료)'
+                                      : layer.id === 'maritime-buoy-locations' && layerDataSource[layer.id] === 'upstream'
+                                        ? '항로표지 위치 (완료)'
                                       : layer.id === 'health-infectious-risk-sido' && layerDataSource[layer.id] === 'upstream'
                                         ? '시도별 감염 위험도 (완료)'
                                       : layer.id === 'health-infectious-trends' && layerDataSource[layer.id] === 'upstream'

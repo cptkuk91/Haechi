@@ -7,7 +7,6 @@ import { toSelectedObjectFromFeature } from '@/lib/selected-object';
 
 // Data imports
 import { getNoFlyZonesGeoJSON, getMDLGeoJSON, getKADIZGeoJSON, getUXOZonesGeoJSON } from '@/data/defense';
-import { getPortsGeoJSON, getDangerZonesGeoJSON, getVTSGeoJSON, getVTSCoverageGeoJSON } from '@/data/maritime';
 
 function emptyFeatureCollection(): GeoJSON.FeatureCollection {
   return {
@@ -85,40 +84,21 @@ export function useDomainLayers() {
 
       // ── 해양 (도메인 2.7) ──
       {
-        id: 'port-terminals',
+        id: 'maritime-buoy-locations',
         domain: 'maritime',
-        name: '항만 터미널',
+        name: '항로표지 위치',
         type: 'marker',
         visible: false,
-        data: getPortsGeoJSON(),
-        style: { color: '#06b6d4', radius: 600, opacity: 0.9 },
-      },
-      {
-        id: 'maritime-danger',
-        domain: 'maritime',
-        name: '해양 위험구역',
-        type: 'polygon',
-        visible: false,
-        data: getDangerZonesGeoJSON(),
-        style: { color: '#f97316', opacity: 0.3 },
-      },
-      {
-        id: 'vts-centers',
-        domain: 'maritime',
-        name: 'VTS 관제센터',
-        type: 'marker',
-        visible: false,
-        data: getVTSGeoJSON(),
-        style: { color: '#3b82f6', radius: 500, opacity: 0.9 },
-      },
-      {
-        id: 'vts-coverage',
-        domain: 'maritime',
-        name: 'VTS 관제구역',
-        type: 'polygon',
-        visible: false,
-        data: getVTSCoverageGeoJSON(),
-        style: { color: [6, 182, 212, 40], opacity: 0.15 },
+        data: emptyFeatureCollection(),
+        style: { color: '#06b6d4', radius: 430, opacity: 0.92 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'maritime-buoy-locations',
+              domain: 'maritime',
+              type: 'marker',
+            })
+          ),
       },
 
       // ── 국가 인프라 (실데이터 placeholder) ──
