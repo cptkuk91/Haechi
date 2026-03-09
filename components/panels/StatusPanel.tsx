@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { ChevronRight, PanelRightClose, Radar, Siren, Target } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import DataFeed from '@/components/ui/DataFeed';
+import { HealthAedLoadingToast } from '@/components/panels/HealthAedLoadingToast';
 import { HealthFacilityDetailPanel } from '@/components/panels/HealthFacilityDetailPanel';
 import { HealthInfectiousDistributionPanel } from '@/components/panels/HealthInfectiousDistributionPanel';
 import { HealthInfectiousTrendsPanel } from '@/components/panels/HealthInfectiousTrendsPanel';
@@ -68,6 +69,17 @@ function isHealthFacilitySelection(selectedObject: { domain: string; properties:
   );
 }
 
+function isHealthAedSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'health') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'aed'
+    || typeof properties.installationPlace === 'string'
+    || typeof properties.organization === 'string'
+    || typeof properties.serialNumber === 'string'
+  );
+}
+
 function isHealthInfectiousRiskSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
   if (selectedObject.domain !== 'health') return false;
   const properties = selectedObject.properties;
@@ -111,6 +123,53 @@ function buildHealthFacilityEntries(properties: Record<string, unknown>): Array<
   }
   if (updatedAt) {
     entries.push(['갱신시각', updatedAt]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
+function buildHealthAedEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'organization']);
+  const installationPlace = pickFirstString(properties, ['installationPlace']);
+  const address = pickFirstString(properties, ['address']);
+  const phone = pickFirstString(properties, ['phone']);
+  const manager = pickFirstString(properties, ['manager']);
+  const managerTel = pickFirstString(properties, ['managerTel']);
+  const manufacturer = pickFirstString(properties, ['manufacturer']);
+  const model = pickFirstString(properties, ['model']);
+  const serialNumber = pickFirstString(properties, ['serialNumber']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+
+  const entries: Array<[string, unknown]> = [
+    ['기관명', name ?? '-'],
+  ];
+
+  if (installationPlace) {
+    entries.push(['설치장소', installationPlace]);
+  }
+  if (address) {
+    entries.push(['주소', address]);
+  }
+  if (phone) {
+    entries.push(['연락처', phone]);
+  }
+  if (manager) {
+    entries.push(['관리자', manager]);
+  }
+  if (managerTel) {
+    entries.push(['관리자 연락처', managerTel]);
+  }
+  if (manufacturer) {
+    entries.push(['제조사', manufacturer]);
+  }
+  if (model) {
+    entries.push(['모델명', model]);
+  }
+  if (serialNumber) {
+    entries.push(['제조번호', serialNumber]);
   }
   if (source) {
     entries.push(['소스', source]);
@@ -343,6 +402,9 @@ export default function StatusPanel() {
     if (isHealthInfectiousRiskSelection(selectedObject)) {
       return buildHealthInfectiousRiskEntries(selectedObject.properties);
     }
+    if (isHealthAedSelection(selectedObject)) {
+      return buildHealthAedEntries(selectedObject.properties);
+    }
     if (isHealthFacilitySelection(selectedObject)) {
       return buildHealthFacilityEntries(selectedObject.properties);
     }
@@ -389,7 +451,10 @@ export default function StatusPanel() {
       ) : null}
 
       <aside className="relative flex h-[calc(100vh-2rem)] w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 pointer-events-auto">
-        <HealthInfectiousRiskLoadingToast />
+        <div className="pointer-events-none absolute left-0 right-0 -top-16 z-[75] flex flex-col gap-3 xl:left-auto xl:right-[calc(100%+0.75rem)] xl:top-3 xl:w-[280px]">
+          <HealthInfectiousRiskLoadingToast />
+          <HealthAedLoadingToast />
+        </div>
 
         <GlassCard
           title="Object Detail"

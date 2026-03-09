@@ -37,7 +37,7 @@ export function HealthInfectiousRiskLoadingToast() {
           animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
           exit={{ opacity: 0, x: 18, y: 8, scale: 0.96 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
-          className="pointer-events-none absolute left-0 right-0 -top-16 z-[75] xl:left-auto xl:right-[calc(100%+0.75rem)] xl:top-3 xl:w-[280px]"
+          className="pointer-events-none w-full"
         >
           <div className="overflow-hidden rounded-2xl border border-cyan-400/25 bg-[#08111a]/92 px-4 py-3 shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-md">
             <div className="mb-2 flex items-center justify-between gap-3">

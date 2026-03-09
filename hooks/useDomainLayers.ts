@@ -193,6 +193,23 @@ export function useDomainLayers() {
           ),
       },
       {
+        id: 'health-aed-locations',
+        domain: 'health',
+        name: '자동심장충격기(AED)',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#f97316', radius: 460, opacity: 0.92 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'health-aed-locations',
+              domain: 'health',
+              type: 'marker',
+            })
+          ),
+      },
+      {
         id: 'health-infectious-risk-sido',
         domain: 'health',
         name: '시도별 감염 위험도',

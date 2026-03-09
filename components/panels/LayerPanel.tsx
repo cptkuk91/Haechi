@@ -7,6 +7,7 @@ import { useIsFetching } from '@tanstack/react-query';
 import { useAppStore } from '@/stores/app-store';
 import { DOMAIN_REGISTRY } from '@/types/domain';
 import { DOMAIN_ICONS } from '@/lib/domain-icons';
+import { getHealthAedFeatureLimitForZoom } from '@/lib/health-aed';
 import type { Alert, LayerConfig } from '@/types/domain';
 
 const CCTV_MAX_DISPLAY_OPTIONS = [100, 500, 1000, 2000, 5000, 10000, 20000] as const;
@@ -66,6 +67,7 @@ function createRestrictedAlert(): Alert {
 export default function LayerPanel() {
   const {
     layers,
+    camera,
     toggleLayer,
     domainDataSource,
     layerDataSource,
@@ -90,6 +92,7 @@ export default function LayerPanel() {
   const [isHealthDistributionPending, startHealthDistributionTransition] = useTransition();
   const [isHealthTrendPending, startHealthTrendTransition] = useTransition();
   const healthRiskFetchCount = useIsFetching({ queryKey: ['health', 'infectious-risk-sido'] });
+  const healthAedFetchCount = useIsFetching({ queryKey: ['health', 'aed'] });
   const healthDistributionFetchCount = useIsFetching({ queryKey: ['health', 'infectious-distribution'] });
   const healthTrendFetchCount = useIsFetching({ queryKey: ['health', 'infectious-trends'] });
 
@@ -176,6 +179,7 @@ export default function LayerPanel() {
     return parsed.toLocaleTimeString('ko-KR', { hour12: false });
   }, [healthInfectiousRiskMeta.updatedAt]);
   const isHealthRiskLoading = isHealthRiskPending || healthRiskFetchCount > 0;
+  const isHealthAedLoading = healthAedFetchCount > 0;
   const updateHealthInfectiousRiskFilters = (next: Partial<typeof healthInfectiousRiskFilters>) => {
     startHealthRiskTransition(() => {
       setHealthInfectiousRiskFilters(next);
@@ -221,6 +225,9 @@ export default function LayerPanel() {
     return parsed.toLocaleTimeString('ko-KR', { hour12: false });
   }, [healthInfectiousTrendMeta.updatedAt]);
   const isHealthTrendLoading = isHealthTrendPending || healthTrendFetchCount > 0;
+  const healthAedFeatureLimit = useMemo(() => {
+    return getHealthAedFeatureLimitForZoom(camera.zoom);
+  }, [camera.zoom]);
   const updateHealthInfectiousTrendFilters = (next: Partial<typeof healthInfectiousTrendFilters>) => {
     startHealthTrendTransition(() => {
       setHealthInfectiousTrendFilters(next);
@@ -398,6 +405,8 @@ export default function LayerPanel() {
                                         ? '응급실 위치 (완료)'
                                       : layer.id === 'health-trauma-centers' && layerDataSource[layer.id] === 'upstream'
                                         ? '외상센터 (완료)'
+                                      : layer.id === 'health-aed-locations' && layerDataSource[layer.id] === 'upstream'
+                                        ? '자동심장충격기(AED) (완료)'
                                       : layer.id === 'health-infectious-risk-sido' && layerDataSource[layer.id] === 'upstream'
                                         ? '시도별 감염 위험도 (완료)'
                                       : layer.id === 'health-infectious-trends' && layerDataSource[layer.id] === 'upstream'
@@ -544,6 +553,13 @@ export default function LayerPanel() {
                                       <p className="px-1 text-[9px] tracking-wider text-cyan-200/80 font-mono">
                                         {`${healthInfectiousRiskFilters.year === null ? healthInfectiousRiskLatestYearLabel : `${healthInfectiousRiskFilters.year}년`} · ${healthInfectiousRiskSelectedDiseaseLabel} · ${healthInfectiousRiskMetricLabel}${isHealthRiskLoading ? ' · 로드 중...' : healthInfectiousRiskUpdatedAtLabel ? ` · ${healthInfectiousRiskUpdatedAtLabel} 기준` : ''}`}
                                       </p>
+                                    </div>
+                                  )}
+                                  {layer.id === 'health-aed-locations' && layer.visible && (
+                                    <div className="px-2 pb-2">
+                                      <div className="rounded-md border border-orange-400/20 bg-orange-500/8 px-2.5 py-2 text-[10px] tracking-wider text-orange-100/85 font-mono">
+                                        {`현재 줌 기준 상위 ${healthAedFeatureLimit.toLocaleString('ko-KR')}개 좌표만 지도에 표시${isHealthAedLoading ? ' · 로드 중...' : ''}`}
+                                      </div>
                                     </div>
                                   )}
                                   {layer.id === 'health-infectious-trends' && layer.visible && (
