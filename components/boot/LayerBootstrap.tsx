@@ -22,10 +22,12 @@ import { usePublicFacilitySafetyLayer } from '@/hooks/usePublicFacilitySafetyLay
 import { useHighwayTollgatesLayer } from '@/hooks/useHighwayTollgatesLayer';
 import { useMaritimeBuoyLayer } from '@/hooks/useMaritimeBuoyLayer';
 import { useMaritimeSeafogLayer } from '@/hooks/useMaritimeSeafogLayer';
+import { useMaritimeSeatnLayer } from '@/hooks/useMaritimeSeatnLayer';
 
 export default function LayerBootstrap() {
   useDomainLayers();
   useAircraftLayer();
+  useMaritimeSeatnLayer();
   useMaritimeSeafogLayer();
   useMaritimeBuoyLayer();
   useCyberDefenseLayer();

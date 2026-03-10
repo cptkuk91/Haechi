@@ -84,6 +84,23 @@ export function useDomainLayers() {
 
       // ── 해양 (도메인 2.7) ──
       {
+        id: 'maritime-seatn-zones',
+        domain: 'maritime',
+        name: '해상사격훈련구역',
+        type: 'polygon',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: [245, 158, 11, 72], opacity: 0.38 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'maritime-seatn-zones',
+              domain: 'maritime',
+              type: 'polygon',
+            })
+          ),
+      },
+      {
         id: 'maritime-seafog-stations',
         domain: 'maritime',
         name: '해무관측소',

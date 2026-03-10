@@ -11,6 +11,7 @@ import { HealthInfectiousTrendsPanel } from '@/components/panels/HealthInfectiou
 import { HealthInfectiousRiskLoadingToast } from '@/components/panels/HealthInfectiousRiskLoadingToast';
 import { HealthPharmacyLoadingToast } from '@/components/panels/HealthPharmacyLoadingToast';
 import { MaritimeBuoyLoadingToast } from '@/components/panels/MaritimeBuoyLoadingToast';
+import { MaritimeSeatnLoadingToast } from '@/components/panels/MaritimeSeatnLoadingToast';
 import { MaritimeSeafogLoadingToast } from '@/components/panels/MaritimeSeafogLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
@@ -111,6 +112,16 @@ function isMaritimeBuoySelection(selectedObject: { domain: string; properties: R
     properties.layerKind === 'maritime-buoy'
     || typeof properties.blfrNo === 'string'
     || typeof properties.lightProperty === 'string'
+  );
+}
+
+function isMaritimeSeatnSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'maritime') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'maritime-seatn'
+    || typeof properties.posCd === 'string'
+    || typeof properties.zoneDesc === 'string'
   );
 }
 
@@ -363,6 +374,89 @@ function buildMaritimeBuoyEntries(properties: Record<string, unknown>): Array<[s
   return entries;
 }
 
+function buildMaritimeSeatnEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'locationLabel']);
+  const posCd = pickFirstString(properties, ['posCd']);
+  const tnzone = pickFirstString(properties, ['tnzone']);
+  const locationLabel = pickFirstString(properties, ['locationLabel']);
+  const zoneDesc = pickFirstString(properties, ['zoneDesc']);
+  const geometryKindLabel = pickFirstString(properties, ['geometryKindLabel']);
+  const heightLimit = pickFirstString(properties, ['heightLimit']);
+  const chartName = pickFirstString(properties, ['chartName']);
+  const chartRef = pickFirstString(properties, ['chartRef']);
+  const chartScale = pickFirstString(properties, ['chartScale']);
+  const originName = pickFirstString(properties, ['originName']);
+  const originOrg = pickFirstString(properties, ['originOrg']);
+  const originYear = pickFirstString(properties, ['originYear']);
+  const relatedDept = pickFirstString(properties, ['relatedDept']);
+  const relatedRegulation = pickFirstString(properties, ['relatedRegulation']);
+  const revisedAt = pickFirstString(properties, ['revisedAt']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+  const coordinateCount = properties.coordinateCount;
+  const radiusNm = properties.radiusNm;
+
+  const entries: Array<[string, unknown]> = [
+    ['구역명', name ?? '-'],
+  ];
+
+  if (posCd) {
+    entries.push(['구역코드', posCd]);
+  }
+  if (tnzone) {
+    entries.push(['훈련구역', tnzone]);
+  }
+  if (geometryKindLabel) {
+    entries.push(['구역형태', geometryKindLabel]);
+  }
+  if (locationLabel) {
+    entries.push(['위치', locationLabel]);
+  }
+  if (zoneDesc) {
+    entries.push(['형태설명', zoneDesc]);
+  }
+  if (radiusNm !== undefined && radiusNm !== null) {
+    entries.push(['반경', `${formatValue(radiusNm)} NM`]);
+  }
+  if (coordinateCount !== undefined && coordinateCount !== null) {
+    entries.push(['좌표수', coordinateCount]);
+  }
+  if (heightLimit) {
+    entries.push(['사용고도', heightLimit]);
+  }
+  if (chartName) {
+    entries.push(['참조해도명', chartName]);
+  }
+  if (chartRef) {
+    entries.push(['참조해도', chartRef]);
+  }
+  if (chartScale) {
+    entries.push(['축척', chartScale]);
+  }
+  if (originName) {
+    entries.push(['원본명', originName]);
+  }
+  if (originOrg) {
+    entries.push(['원본기관', originOrg]);
+  }
+  if (originYear) {
+    entries.push(['원본연도', originYear]);
+  }
+  if (relatedDept) {
+    entries.push(['관련부서', relatedDept]);
+  }
+  if (relatedRegulation) {
+    entries.push(['관련규정', relatedRegulation]);
+  }
+  if (revisedAt) {
+    entries.push(['개정년월', revisedAt]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
 function buildMaritimeSeafogEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
   const name = pickFirstString(properties, ['name']);
   const obsCode = pickFirstString(properties, ['obsCode']);
@@ -578,6 +672,9 @@ export default function StatusPanel() {
     if (isHealthInfectiousRiskSelection(selectedObject)) {
       return buildHealthInfectiousRiskEntries(selectedObject.properties);
     }
+    if (isMaritimeSeatnSelection(selectedObject)) {
+      return buildMaritimeSeatnEntries(selectedObject.properties);
+    }
     if (isMaritimeSeafogSelection(selectedObject)) {
       return buildMaritimeSeafogEntries(selectedObject.properties);
     }
@@ -640,6 +737,7 @@ export default function StatusPanel() {
           <HealthInfectiousRiskLoadingToast />
           <HealthPharmacyLoadingToast />
           <HealthAedLoadingToast />
+          <MaritimeSeatnLoadingToast />
           <MaritimeSeafogLoadingToast />
           <MaritimeBuoyLoadingToast />
         </div>
