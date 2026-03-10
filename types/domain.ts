@@ -87,7 +87,7 @@ export const DOMAIN_REGISTRY: DomainInfo[] = [
   { id: 'disaster', name: 'Disasters & Environment', nameKo: '재난/재해', icon: '🚨', color: '#ef4444', layers: [] },
   { id: 'weather', name: 'Weather & Atmosphere', nameKo: '기상/대기 환경', icon: '🌤️', color: '#3b82f6', layers: [] },
   { id: 'maritime', name: 'Maritime & Port', nameKo: '해양/항만 관제', icon: '⚓', color: '#06b6d4', layers: [] },
-  { id: 'crime', name: 'Crime & Public Safety (Pending)', nameKo: '치안/범죄 예방 (작업 대기)', icon: '🚔', color: '#f59e0b', layers: [] },
+  { id: 'crime', name: 'Crime & Public Safety', nameKo: '치안/범죄 예방', icon: '🚔', color: '#f59e0b', layers: [] },
   { id: 'transit', name: 'Transit & Crowd', nameKo: '대중교통/군중', icon: '🚋', color: '#8b5cf6', layers: [] },
   { id: 'health', name: 'Healthcare & Emergency', nameKo: '보건/의료', icon: '🏥', color: '#10b981', layers: [] },
   { id: 'infra', name: 'Critical Infrastructure', nameKo: '국가 인프라', icon: '⚡', color: '#f97316', layers: [] },
