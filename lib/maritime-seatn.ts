@@ -78,7 +78,14 @@ export function buildSeatnCircleRing(
   radiusNm: number,
   steps = 48
 ): [number, number][] {
-  const radiusMeters = radiusNm * NAUTICAL_MILE_METERS;
+  return buildCircleRingMeters(center, radiusNm * NAUTICAL_MILE_METERS, steps);
+}
+
+export function buildCircleRingMeters(
+  center: [number, number],
+  radiusMeters: number,
+  steps = 48
+): [number, number][] {
   const [centerLng, centerLat] = center;
   const centerLatRad = centerLat * (Math.PI / 180);
   const ring: [number, number][] = [];

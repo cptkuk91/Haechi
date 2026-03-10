@@ -84,6 +84,40 @@ export function useDomainLayers() {
 
       // ── 해양 (도메인 2.7) ──
       {
+        id: 'maritime-ulsan-port-facilities',
+        domain: 'maritime',
+        name: '울산항 항만시설',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#fb7185', radius: 440, opacity: 0.94 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'maritime-ulsan-port-facilities',
+              domain: 'maritime',
+              type: 'marker',
+            })
+          ),
+      },
+      {
+        id: 'maritime-ulsan-anchorages',
+        domain: 'maritime',
+        name: '울산항 정박지',
+        type: 'polygon',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: [16, 185, 129, 72], opacity: 0.32 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'maritime-ulsan-anchorages',
+              domain: 'maritime',
+              type: 'polygon',
+            })
+          ),
+      },
+      {
         id: 'maritime-seatn-zones',
         domain: 'maritime',
         name: '해상사격훈련구역',

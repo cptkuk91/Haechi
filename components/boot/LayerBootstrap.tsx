@@ -23,10 +23,14 @@ import { useHighwayTollgatesLayer } from '@/hooks/useHighwayTollgatesLayer';
 import { useMaritimeBuoyLayer } from '@/hooks/useMaritimeBuoyLayer';
 import { useMaritimeSeafogLayer } from '@/hooks/useMaritimeSeafogLayer';
 import { useMaritimeSeatnLayer } from '@/hooks/useMaritimeSeatnLayer';
+import { useMaritimeUlsanAnchoragesLayer } from '@/hooks/useMaritimeUlsanAnchoragesLayer';
+import { useMaritimeUlsanPortFacilitiesLayer } from '@/hooks/useMaritimeUlsanPortFacilitiesLayer';
 
 export default function LayerBootstrap() {
   useDomainLayers();
   useAircraftLayer();
+  useMaritimeUlsanPortFacilitiesLayer();
+  useMaritimeUlsanAnchoragesLayer();
   useMaritimeSeatnLayer();
   useMaritimeSeafogLayer();
   useMaritimeBuoyLayer();

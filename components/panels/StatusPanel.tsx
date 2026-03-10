@@ -13,6 +13,8 @@ import { HealthPharmacyLoadingToast } from '@/components/panels/HealthPharmacyLo
 import { MaritimeBuoyLoadingToast } from '@/components/panels/MaritimeBuoyLoadingToast';
 import { MaritimeSeatnLoadingToast } from '@/components/panels/MaritimeSeatnLoadingToast';
 import { MaritimeSeafogLoadingToast } from '@/components/panels/MaritimeSeafogLoadingToast';
+import { MaritimeUlsanAnchoragesLoadingToast } from '@/components/panels/MaritimeUlsanAnchoragesLoadingToast';
+import { MaritimeUlsanPortFacilitiesLoadingToast } from '@/components/panels/MaritimeUlsanPortFacilitiesLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
 function formatValue(value: unknown): string {
@@ -112,6 +114,26 @@ function isMaritimeBuoySelection(selectedObject: { domain: string; properties: R
     properties.layerKind === 'maritime-buoy'
     || typeof properties.blfrNo === 'string'
     || typeof properties.lightProperty === 'string'
+  );
+}
+
+function isMaritimeUlsanPortFacilitySelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'maritime') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'maritime-ulsan-port-facility'
+    || typeof properties.wharfName === 'string'
+    || typeof properties.operatorName === 'string'
+  );
+}
+
+function isMaritimeUlsanAnchorageSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'maritime') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'maritime-ulsan-anchorage'
+    || typeof properties.anchorageName === 'string'
+    || typeof properties.geometryKind === 'string'
   );
 }
 
@@ -366,6 +388,112 @@ function buildMaritimeBuoyEntries(properties: Record<string, unknown>): Array<[s
   }
   if (remark) {
     entries.push(['비고', remark]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
+function buildMaritimeUlsanPortFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'wharfName']);
+  const portName = pickFirstString(properties, ['portName']);
+  const facilityCode = pickFirstString(properties, ['facilityCode']);
+  const facilitySubCode = pickFirstString(properties, ['facilitySubCode']);
+  const wharfCategory = pickFirstString(properties, ['wharfCategory']);
+  const cargoName = pickFirstString(properties, ['cargoName']);
+  const operatorName = pickFirstString(properties, ['operatorName']);
+  const length = pickFirstString(properties, ['length']);
+  const depthOfWater = pickFirstString(properties, ['depthOfWater']);
+  const berthCapacity = pickFirstString(properties, ['berthCapacity']);
+  const berthVesselCount = pickFirstString(properties, ['berthVesselCount']);
+  const unloadCapacity = pickFirstString(properties, ['unloadCapacity']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+
+  const entries: Array<[string, unknown]> = [
+    ['시설명', name ?? '-'],
+  ];
+
+  if (portName) {
+    entries.push(['항만', portName]);
+  }
+  if (facilityCode) {
+    entries.push(['시설코드', facilityCode]);
+  }
+  if (facilitySubCode) {
+    entries.push(['세부코드', facilitySubCode]);
+  }
+  if (wharfCategory) {
+    entries.push(['부두구분', wharfCategory]);
+  }
+  if (cargoName) {
+    entries.push(['취급화물', cargoName]);
+  }
+  if (operatorName) {
+    entries.push(['운영사', operatorName]);
+  }
+  if (length) {
+    entries.push(['연장', length]);
+  }
+  if (depthOfWater) {
+    entries.push(['수심', depthOfWater]);
+  }
+  if (berthCapacity) {
+    entries.push(['접안능력', berthCapacity]);
+  }
+  if (berthVesselCount) {
+    entries.push(['동시접안척수', berthVesselCount]);
+  }
+  if (unloadCapacity) {
+    entries.push(['하역능력', unloadCapacity]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
+function buildMaritimeUlsanAnchorageEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'anchorageName']);
+  const facilityCode = pickFirstString(properties, ['facilityCode']);
+  const geometryKindLabel = pickFirstString(properties, ['geometryKindLabel']);
+  const anchorageType = pickFirstString(properties, ['anchorageType']);
+  const remark = pickFirstString(properties, ['remark']);
+  const titleVisible = pickFirstString(properties, ['titleVisible']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+  const pointCount = properties.pointCount;
+  const radiusMeters = properties.radiusMeters;
+  const rawTypes = Array.isArray(properties.rawTypes) ? properties.rawTypes.join(', ') : null;
+
+  const entries: Array<[string, unknown]> = [
+    ['정박지명', name ?? '-'],
+  ];
+
+  if (facilityCode) {
+    entries.push(['시설코드', facilityCode]);
+  }
+  if (geometryKindLabel) {
+    entries.push(['표시형태', geometryKindLabel]);
+  }
+  if (anchorageType) {
+    entries.push(['원본타입', anchorageType]);
+  }
+  if (radiusMeters !== undefined && radiusMeters !== null) {
+    entries.push(['반경', `${formatValue(radiusMeters)} m`]);
+  }
+  if (pointCount !== undefined && pointCount !== null) {
+    entries.push(['좌표수', pointCount]);
+  }
+  if (remark) {
+    entries.push(['비고', remark]);
+  }
+  if (titleVisible) {
+    entries.push(['라벨표시', titleVisible]);
+  }
+  if (rawTypes) {
+    entries.push(['포함타입', rawTypes]);
   }
   if (source) {
     entries.push(['소스', source]);
@@ -672,6 +800,12 @@ export default function StatusPanel() {
     if (isHealthInfectiousRiskSelection(selectedObject)) {
       return buildHealthInfectiousRiskEntries(selectedObject.properties);
     }
+    if (isMaritimeUlsanAnchorageSelection(selectedObject)) {
+      return buildMaritimeUlsanAnchorageEntries(selectedObject.properties);
+    }
+    if (isMaritimeUlsanPortFacilitySelection(selectedObject)) {
+      return buildMaritimeUlsanPortFacilityEntries(selectedObject.properties);
+    }
     if (isMaritimeSeatnSelection(selectedObject)) {
       return buildMaritimeSeatnEntries(selectedObject.properties);
     }
@@ -737,6 +871,8 @@ export default function StatusPanel() {
           <HealthInfectiousRiskLoadingToast />
           <HealthPharmacyLoadingToast />
           <HealthAedLoadingToast />
+          <MaritimeUlsanPortFacilitiesLoadingToast />
+          <MaritimeUlsanAnchoragesLoadingToast />
           <MaritimeSeatnLoadingToast />
           <MaritimeSeafogLoadingToast />
           <MaritimeBuoyLoadingToast />
