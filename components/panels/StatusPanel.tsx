@@ -11,6 +11,7 @@ import { HealthInfectiousTrendsPanel } from '@/components/panels/HealthInfectiou
 import { HealthInfectiousRiskLoadingToast } from '@/components/panels/HealthInfectiousRiskLoadingToast';
 import { HealthPharmacyLoadingToast } from '@/components/panels/HealthPharmacyLoadingToast';
 import { MaritimeBuoyLoadingToast } from '@/components/panels/MaritimeBuoyLoadingToast';
+import { MaritimeSeafogLoadingToast } from '@/components/panels/MaritimeSeafogLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
 function formatValue(value: unknown): string {
@@ -110,6 +111,16 @@ function isMaritimeBuoySelection(selectedObject: { domain: string; properties: R
     properties.layerKind === 'maritime-buoy'
     || typeof properties.blfrNo === 'string'
     || typeof properties.lightProperty === 'string'
+  );
+}
+
+function isMaritimeSeafogSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'maritime') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'maritime-seafog'
+    || typeof properties.obsCode === 'string'
+    || typeof properties.visibilityMeters === 'number'
   );
 }
 
@@ -352,6 +363,65 @@ function buildMaritimeBuoyEntries(properties: Record<string, unknown>): Array<[s
   return entries;
 }
 
+function buildMaritimeSeafogEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name']);
+  const obsCode = pickFirstString(properties, ['obsCode']);
+  const observedAt = pickFirstString(properties, ['observedAt']);
+  const fogRiskLabel = pickFirstString(properties, ['fogRiskLabel']);
+  const visibilityLabel = pickFirstString(properties, ['visibilityLabel']);
+  const verticalVisibilityLabel = pickFirstString(properties, ['verticalVisibilityLabel']);
+  const windDirection = pickFirstString(properties, ['windDirection']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+  const windSpeed = properties.windSpeed;
+  const humidityPct = properties.humidityPct;
+  const pressureHpa = properties.pressureHpa;
+  const airTemperatureC = properties.airTemperatureC;
+  const waterTemperatureC = properties.waterTemperatureC;
+
+  const entries: Array<[string, unknown]> = [
+    ['관측소', name ?? '-'],
+  ];
+
+  if (obsCode) {
+    entries.push(['관측소 코드', obsCode]);
+  }
+  if (observedAt) {
+    entries.push(['기준시각', observedAt]);
+  }
+  if (fogRiskLabel) {
+    entries.push(['해무 위험도', fogRiskLabel]);
+  }
+  if (visibilityLabel) {
+    entries.push(['수평시정', visibilityLabel]);
+  }
+  if (verticalVisibilityLabel) {
+    entries.push(['수직시정', verticalVisibilityLabel]);
+  }
+  if (windSpeed !== undefined && windSpeed !== null) {
+    entries.push(['풍속', `${formatValue(windSpeed)} m/s`]);
+  }
+  if (windDirection) {
+    entries.push(['풍향', windDirection]);
+  }
+  if (humidityPct !== undefined && humidityPct !== null) {
+    entries.push(['습도', `${formatValue(humidityPct)}%`]);
+  }
+  if (pressureHpa !== undefined && pressureHpa !== null) {
+    entries.push(['기압', `${formatValue(pressureHpa)} hPa`]);
+  }
+  if (airTemperatureC !== undefined && airTemperatureC !== null) {
+    entries.push(['기온', `${formatValue(airTemperatureC)}°C`]);
+  }
+  if (waterTemperatureC !== undefined && waterTemperatureC !== null) {
+    entries.push(['수온', `${formatValue(waterTemperatureC)}°C`]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
 function buildSocialWelfareFacilityEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
   const name = pickFirstString(properties, ['name', 'fac_nam']);
   const facilityType = pickFirstString(properties, ['facilityType', 'category', 'cat_nam']);
@@ -508,6 +578,9 @@ export default function StatusPanel() {
     if (isHealthInfectiousRiskSelection(selectedObject)) {
       return buildHealthInfectiousRiskEntries(selectedObject.properties);
     }
+    if (isMaritimeSeafogSelection(selectedObject)) {
+      return buildMaritimeSeafogEntries(selectedObject.properties);
+    }
     if (isMaritimeBuoySelection(selectedObject)) {
       return buildMaritimeBuoyEntries(selectedObject.properties);
     }
@@ -567,6 +640,7 @@ export default function StatusPanel() {
           <HealthInfectiousRiskLoadingToast />
           <HealthPharmacyLoadingToast />
           <HealthAedLoadingToast />
+          <MaritimeSeafogLoadingToast />
           <MaritimeBuoyLoadingToast />
         </div>
 

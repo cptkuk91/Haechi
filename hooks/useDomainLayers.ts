@@ -84,6 +84,23 @@ export function useDomainLayers() {
 
       // ── 해양 (도메인 2.7) ──
       {
+        id: 'maritime-seafog-stations',
+        domain: 'maritime',
+        name: '해무관측소',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#f59e0b', radius: 520, opacity: 0.95 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'maritime-seafog-stations',
+              domain: 'maritime',
+              type: 'marker',
+            })
+          ),
+      },
+      {
         id: 'maritime-buoy-locations',
         domain: 'maritime',
         name: '항로표지 위치',
