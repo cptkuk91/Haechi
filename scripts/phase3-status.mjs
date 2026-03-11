@@ -11,7 +11,7 @@ const REQUIRED_LAYER_IDS = {
   vulnerable: ['vulnerable-amber-radius', 'vulnerable-emergency-iot'],
 };
 
-const BASE = 'http://localhost:3120';
+const BASE = process.env.PHASE3_STATUS_BASE_URL || 'http://localhost:3120';
 const CWD = process.cwd();
 
 async function loadText(relativePath) {
