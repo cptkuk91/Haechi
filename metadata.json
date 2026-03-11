@@ -1,5 +1,5 @@
 {
-  "name": "Worldview Surveillance",
-  "description": "AI Palantir Ontology Social Surveillance Network Interface",
+  "name": "HAECHI",
+  "description": "공공 안전 데이터를 통합 관제하는 지도 기반 상황판",
   "requestFramePermissions": []
 }

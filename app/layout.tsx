@@ -14,13 +14,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Worldview Surveillance',
-  description: 'AI Palantir Ontology Social Surveillance Network Interface',
+  title: 'HAECHI',
+  description: '공공 안전 데이터를 통합 관제하는 지도 기반 상황판',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="ko" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans antialiased bg-black text-white" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
