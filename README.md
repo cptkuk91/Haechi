@@ -3,6 +3,8 @@
 HAECHI는 공공 안전 데이터를 하나의 지도 위에서 통합 관제하기 위한 상황판 프로젝트입니다.  
 항공, CCTV, 해양/항만, 재난, 보건/의료, 사회적 약자, 국가 인프라 등 여러 도메인의 레이어를 하나의 지도 UI에 올리고, 우측 상태 패널과 경보 패널에서 세부 상황을 함께 확인할 수 있도록 구성되어 있습니다.
 
+![HAECHI dashboard overview](public/assets/readme/haechi-dashboard-overview.png)
+
 ## 프로젝트 목표
 
 - 여러 공공 API와 좌표 데이터를 하나의 지도 UX로 통합
@@ -26,6 +28,8 @@ HAECHI는 공공 안전 데이터를 하나의 지도 위에서 통합 관제하
 - README 기준 운영 원칙은 `레이어 패널에서 upstream source로 판별된 경우만 (완료)` 입니다.
 - 일부 예전 레이어명에는 `(완료)` 문자열이 이름 자체에 포함되어 있을 수 있습니다.
 - 배포 판단 기준은 하드코딩된 문자열이 아니라 실제 `source === 'upstream'` 상태입니다.
+
+![HAECHI dashboard empty state](public/assets/readme/haechi-dashboard-empty-state.png)
 
 ## 현재 구현 현황
 
