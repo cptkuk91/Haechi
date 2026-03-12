@@ -1,7 +1,8 @@
 {
-  "name": "tenmo",
+  "name": "haechi",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "dev": "next dev -p 3120",
     "build": "next build",
