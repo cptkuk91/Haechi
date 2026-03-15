@@ -204,6 +204,23 @@ export function useDomainLayers() {
             })
           ),
       },
+      {
+        id: 'infra-ev-chargers',
+        domain: 'infra',
+        name: '전기차 충전소',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#fb923c', radius: 520, opacity: 0.92 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'infra-ev-chargers',
+              domain: 'infra',
+              type: 'marker',
+            })
+          ),
+      },
 
       // ── 보건/의료 (실데이터 placeholder) ──
       {

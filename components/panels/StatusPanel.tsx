@@ -11,6 +11,7 @@ import { HealthInfectiousDistributionPanel } from '@/components/panels/HealthInf
 import { HealthInfectiousTrendsPanel } from '@/components/panels/HealthInfectiousTrendsPanel';
 import { HealthInfectiousRiskLoadingToast } from '@/components/panels/HealthInfectiousRiskLoadingToast';
 import { HealthPharmacyLoadingToast } from '@/components/panels/HealthPharmacyLoadingToast';
+import { InfraEvChargersLoadingToast } from '@/components/panels/InfraEvChargersLoadingToast';
 import { MaritimeBuoyLoadingToast } from '@/components/panels/MaritimeBuoyLoadingToast';
 import { MaritimeSeatnLoadingToast } from '@/components/panels/MaritimeSeatnLoadingToast';
 import { MaritimeSeafogLoadingToast } from '@/components/panels/MaritimeSeafogLoadingToast';
@@ -18,6 +19,7 @@ import { MaritimeUlsanAnchoragesLoadingToast } from '@/components/panels/Maritim
 import { MaritimeUlsanPortFacilitiesLoadingToast } from '@/components/panels/MaritimeUlsanPortFacilitiesLoadingToast';
 import { WeatherAirQualityHeatmapLoadingToast } from '@/components/panels/WeatherAirQualityHeatmapLoadingToast';
 import { WeatherAirQualityStationsLoadingToast } from '@/components/panels/WeatherAirQualityStationsLoadingToast';
+import { describeInfraEvChargerStatus } from '@/lib/infra-ev-chargers';
 import { useAppStore } from '@/stores/app-store';
 
 function formatValue(value: unknown): string {
@@ -77,6 +79,17 @@ function isHighwayTollgateSelection(selectedObject: { domain: string; properties
     typeof properties.unitCode === 'string'
     || typeof properties.routeNo === 'string'
     || typeof properties.routeName === 'string'
+  );
+}
+
+function isInfraEvChargerSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'infra') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'infra-ev-charger'
+    || typeof properties.stationId === 'string'
+    || typeof properties.availabilityStatus === 'string'
+    || typeof properties.totalChargers === 'number'
   );
 }
 
@@ -997,6 +1010,136 @@ function buildHighwayTollgateEntries(properties: Record<string, unknown>): Array
   return entries;
 }
 
+function buildInfraEvChargerEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name']);
+  const stationId = pickFirstString(properties, ['stationId']);
+  const availabilityLabel = pickFirstString(properties, ['availabilityLabel']);
+  const address = pickFirstString(properties, ['address']);
+  const locationHint = pickFirstString(properties, ['locationHint']);
+  const operatorName = pickFirstString(properties, ['operatorName']);
+  const agencyName = pickFirstString(properties, ['agencyName']);
+  const operatorPhone = pickFirstString(properties, ['operatorPhone']);
+  const useTime = pickFirstString(properties, ['useTime']);
+  const chargerMethod = pickFirstString(properties, ['chargerMethod']);
+  const outputSummary = pickFirstString(properties, ['outputSummary']);
+  const makerSummary = pickFirstString(properties, ['makerSummary']);
+  const floorSummary = pickFirstString(properties, ['floorSummary']);
+  const installedYearSummary = pickFirstString(properties, ['installedYearSummary']);
+  const regionLabel = pickFirstString(properties, ['regionLabel']);
+  const parkingFreeLabel = pickFirstString(properties, ['parkingFreeLabel']);
+  const userLimitLabel = pickFirstString(properties, ['userLimitLabel']);
+  const userLimitDetail = pickFirstString(properties, ['userLimitDetail']);
+  const trafficSupportLabel = pickFirstString(properties, ['trafficSupportLabel']);
+  const latestStatusUpdatedAt = pickFirstString(properties, ['latestStatusUpdatedAt']);
+  const lastChargeStartedAt = pickFirstString(properties, ['lastChargeStartedAt']);
+  const lastChargeEndedAt = pickFirstString(properties, ['lastChargeEndedAt']);
+  const currentChargeStartedAt = pickFirstString(properties, ['currentChargeStartedAt']);
+  const totalChargers = pickFirstNumber(properties, ['totalChargers']);
+  const availableCount = pickFirstNumber(properties, ['availableCount']);
+  const chargingCount = pickFirstNumber(properties, ['chargingCount']);
+  const unavailableCount = pickFirstNumber(properties, ['unavailableCount']);
+  const maxOutputKw = pickFirstNumber(properties, ['maxOutputKw']);
+  const chargerTypeSummary = pickFirstString(properties, ['chargerTypeSummary']);
+  const kind = pickFirstString(properties, ['kind']);
+  const kindDetail = pickFirstString(properties, ['kindDetail']);
+  const statCode = pickFirstString(properties, ['stat']);
+
+  const entries: Array<[string, unknown]> = [
+    ['충전소명', name ?? '-'],
+    ['가용 상태', availabilityLabel ?? '-'],
+  ];
+
+  if (stationId) {
+    entries.push(['충전소ID', stationId]);
+  }
+  if (regionLabel) {
+    entries.push(['권역', regionLabel]);
+  }
+  if (address) {
+    entries.push(['주소', address]);
+  }
+  if (locationHint) {
+    entries.push(['위치 힌트', locationHint]);
+  }
+  if (useTime) {
+    entries.push(['이용 가능시간', useTime]);
+  }
+  if (operatorName) {
+    entries.push(['운영기관', operatorName]);
+  }
+  if (agencyName) {
+    entries.push(['기관명', agencyName]);
+  }
+  if (operatorPhone) {
+    entries.push(['문의전화', operatorPhone]);
+  }
+  if (chargerMethod) {
+    entries.push(['충전 방식', chargerMethod]);
+  }
+  if (totalChargers !== null) {
+    entries.push(['총 충전기 수', totalChargers]);
+  }
+  if (availableCount !== null) {
+    entries.push(['사용 가능', availableCount]);
+  }
+  if (chargingCount !== null) {
+    entries.push(['충전 중', chargingCount]);
+  }
+  if (unavailableCount !== null) {
+    entries.push(['사용 불가/점검', unavailableCount]);
+  }
+  if (maxOutputKw !== null) {
+    entries.push(['최대 출력', `${formatValue(maxOutputKw)} kW`]);
+  }
+  if (outputSummary) {
+    entries.push(['출력 구성', outputSummary]);
+  }
+  if (chargerTypeSummary) {
+    entries.push(['충전기 타입코드', chargerTypeSummary]);
+  }
+  if (makerSummary) {
+    entries.push(['제조사', makerSummary]);
+  }
+  if (parkingFreeLabel) {
+    entries.push(['주차요금', parkingFreeLabel]);
+  }
+  if (userLimitLabel) {
+    entries.push(['이용 제한', userLimitLabel]);
+  }
+  if (userLimitDetail) {
+    entries.push(['이용 제한 상세', userLimitDetail]);
+  }
+  if (trafficSupportLabel) {
+    entries.push(['편의 제공', trafficSupportLabel]);
+  }
+  if (floorSummary) {
+    entries.push(['층수 정보', floorSummary]);
+  }
+  if (installedYearSummary) {
+    entries.push(['설치연도', installedYearSummary]);
+  }
+  if (kind || kindDetail) {
+    entries.push(['시설 구분 코드', [kind, kindDetail].filter(Boolean).join(' / ')]);
+  }
+  if (statCode) {
+    entries.push(['대표 상태코드', describeInfraEvChargerStatus(statCode)]);
+  }
+  if (latestStatusUpdatedAt) {
+    entries.push(['상태 갱신시각', latestStatusUpdatedAt]);
+  }
+  if (currentChargeStartedAt) {
+    entries.push(['현재 충전 시작', currentChargeStartedAt]);
+  }
+  if (lastChargeStartedAt) {
+    entries.push(['최근 충전 시작', lastChargeStartedAt]);
+  }
+  if (lastChargeEndedAt) {
+    entries.push(['최근 충전 종료', lastChargeEndedAt]);
+  }
+
+  return entries;
+}
+
 export default function StatusPanel() {
   const selectedObject = useAppStore((s) => s.selectedObject);
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen);
@@ -1044,6 +1187,9 @@ export default function StatusPanel() {
     if (isHealthFacilitySelection(selectedObject)) {
       return buildHealthFacilityEntries(selectedObject.properties);
     }
+    if (isInfraEvChargerSelection(selectedObject)) {
+      return buildInfraEvChargerEntries(selectedObject.properties);
+    }
     if (isHighwayTollgateSelection(selectedObject)) {
       return buildHighwayTollgateEntries(selectedObject.properties);
     }
@@ -1088,6 +1234,7 @@ export default function StatusPanel() {
 
       <aside className="relative flex h-[calc(100vh-2rem)] w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 pointer-events-auto">
         <div className="pointer-events-none absolute left-0 right-0 -top-16 z-[75] flex flex-col gap-3 xl:left-auto xl:right-[calc(100%+0.75rem)] xl:top-3 xl:w-[280px]">
+          <InfraEvChargersLoadingToast />
           <WeatherAirQualityHeatmapLoadingToast />
           <WeatherAirQualityStationsLoadingToast />
           <DisasterCivilDefenseShelterLoadingToast />

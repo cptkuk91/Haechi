@@ -83,7 +83,7 @@
 | `crime` | 사실상 비어 있음 | 생활안전지도 안전비상벨 |
 | `disaster` | 지진 실데이터 + 민방위대피시설 연동 완료 | 추가 대피소/피난 지원 레이어 검토 |
 | `weather` | 대기질 측정소 + 대기질 열지도 연동 완료 | 다음 기상 실데이터 보강 후보 검토 |
-| `infra` | 체감형 포인트 레이어 부족 | 전기자동차 충전소 |
+| `infra` | 도로공사 영업소 + 전기차 충전소 연동 완료 | 다음 체감형 인프라 레이어 검토 |
 | `maritime` | 해양 관측값 레이어 없음 | 해양기상부이·파고부이 |
 | `vulnerable` | 계절성 보호 레이어 없음 | 한파쉼터 |
 
@@ -141,11 +141,13 @@
 - 진행 상태: 완료
 - 완료 메모: `weather-air-quality-heatmap` 레이어 추가, 실데이터 heatmap + 로딩 토스트 + 상세 패널 연동 완료
 
-#### 6. `전기차-충전소`
+#### 6. `전기차-충전소` [완료]
 
 - 목적: `infra` 도메인 강화
 - 이유: 사용자 체감이 높고 구현이 단순함
 - 확보 위치: [공공데이터포털 `한국환경공단_전기자동차 충전소 정보`](https://www.data.go.kr/data/15076352/openapi.do)
+- 진행 상태: 완료
+- 완료 메모: `infra-ev-chargers` 레이어 추가, 실데이터 marker + 상세 패널 + 로딩 토스트 연동 완료
 
 #### 7. `한파-쉼터`
 
@@ -190,7 +192,7 @@
 | 3 | 행정안전부 민방위대피시설 조회서비스 | `민방위-대피시설` | `disaster` | 신규 추가 | [공공데이터포털](https://www.data.go.kr/data/15115459/openapi.do?recommendDataYn=Y) | 완료, `disaster-civil-defense-shelters` 실데이터 marker + 상세 패널 연동 |
 | 4 | 에어코리아 측정소정보 | `대기질-측정소` | `weather` | 신규 추가 | [공공데이터포털](https://www.data.go.kr/data/15073877/openapi.do) | 완료, `weather-air-quality-stations` 실데이터 marker + 상세 패널 연동 |
 | 5 | 에어코리아 대기오염정보 | `대기질-열지도` | `weather` | 신규 추가 | [공공데이터포털](https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15073861) | 완료, `weather-air-quality-heatmap` 실데이터 heatmap + 로딩 토스트 연동 |
-| 6 | 한국환경공단 전기자동차 충전소 정보 | `전기차-충전소` | `infra` | 신규 추가 | [공공데이터포털](https://www.data.go.kr/data/15076352/openapi.do) | 구현 난이도 낮음 |
+| 6 | 한국환경공단 전기자동차 충전소 정보 | `전기차-충전소` | `infra` | 신규 추가 | [공공데이터포털](https://www.data.go.kr/data/15076352/openapi.do) | 완료, `infra-ev-chargers` 실데이터 marker + 상세 패널 연동 |
 | 7 | 행정안전부 공유플랫폼 한파쉼터 | `한파-쉼터` | `vulnerable` | 신규 추가 | [공공데이터포털](https://www.data.go.kr/data/15139703/openapi.do?recommendDataYn=Y) / [재난안전데이터 공유플랫폼](https://www.safetydata.go.kr/disaster-data/view?dataSn=966) | 계절성 보호 레이어 |
 | 8 | 기상청 특보 조회서비스 | `기상-특보구역` | `weather` | 기존 mock 대체 또는 병행 | [특보 조회서비스](https://www.data.go.kr/data/15139476/openapi.do?recommendDataYn=Y) / [특보구역정보](https://www.data.go.kr/data/15126651/openapi.do) | 기존 `weather-storm-zone` 연계 검토 |
 | 9 | 기상청 태풍정보 / 태풍정보(TD) | `태풍-경로` | `weather` | 신규 추가 | [공공데이터포털](https://www.data.go.kr/data/15043565/openapi.do) | point + line 조합 |

@@ -22,6 +22,7 @@ import { useElderlyWelfareFacilitiesLayer } from '@/hooks/useElderlyWelfareFacil
 import { useChildWelfareFacilitiesLayer } from '@/hooks/useChildWelfareFacilitiesLayer';
 import { useDisabledFacilitiesLayer } from '@/hooks/useDisabledFacilitiesLayer';
 import { useMulticulturalSupportCentersLayer } from '@/hooks/useMulticulturalSupportCentersLayer';
+import { useInfraEvChargersLayer } from '@/hooks/useInfraEvChargersLayer';
 import { usePublicFacilitySafetyLayer } from '@/hooks/usePublicFacilitySafetyLayer';
 import { useHighwayTollgatesLayer } from '@/hooks/useHighwayTollgatesLayer';
 import { useMaritimeBuoyLayer } from '@/hooks/useMaritimeBuoyLayer';
@@ -44,6 +45,7 @@ export default function LayerBootstrap() {
   useWeatherLayer();
   useWeatherAirQualityStationsLayer();
   useWeatherAirQualityHeatmapLayer();
+  useInfraEvChargersLayer();
   useDisasterLayer();
   useCivilDefenseSheltersLayer();
   useEarthquakeLayer();

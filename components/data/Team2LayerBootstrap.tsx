@@ -34,6 +34,7 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'vulnerable-multicultural-support-centers',
   'infra-public-facility-safety',
   'infra-highway-tollgates',
+  'infra-ev-chargers',
   'health-emergency-room-location',
   'health-trauma-centers',
   'health-aed-locations',
