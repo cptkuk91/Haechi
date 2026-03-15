@@ -25,6 +25,8 @@ import { toSelectedObjectFromFeature } from '@/lib/selected-object';
 
 const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'disaster-wildfire-points',
+  'disaster-earthquake-ripple',
+  'disaster-civil-defense-shelters',
   'vulnerable-missing-persons',
   'vulnerable-elderly-welfare-facilities',
   'vulnerable-child-welfare-facilities',
@@ -39,6 +41,7 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'health-infectious-risk-sido',
   'health-infectious-trends',
   'health-infectious-distribution',
+  'weather-air-quality-stations',
   'transit-crowd-density',
   'transit-subway-passengers',
   'transit-bus-passengers',

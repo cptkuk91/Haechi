@@ -5,6 +5,7 @@ import { ChevronRight, PanelRightClose, Radar, Siren, Target } from 'lucide-reac
 import GlassCard from '@/components/ui/GlassCard';
 import DataFeed from '@/components/ui/DataFeed';
 import { HealthAedLoadingToast } from '@/components/panels/HealthAedLoadingToast';
+import { DisasterCivilDefenseShelterLoadingToast } from '@/components/panels/DisasterCivilDefenseShelterLoadingToast';
 import { HealthFacilityDetailPanel } from '@/components/panels/HealthFacilityDetailPanel';
 import { HealthInfectiousDistributionPanel } from '@/components/panels/HealthInfectiousDistributionPanel';
 import { HealthInfectiousTrendsPanel } from '@/components/panels/HealthInfectiousTrendsPanel';
@@ -15,6 +16,7 @@ import { MaritimeSeatnLoadingToast } from '@/components/panels/MaritimeSeatnLoad
 import { MaritimeSeafogLoadingToast } from '@/components/panels/MaritimeSeafogLoadingToast';
 import { MaritimeUlsanAnchoragesLoadingToast } from '@/components/panels/MaritimeUlsanAnchoragesLoadingToast';
 import { MaritimeUlsanPortFacilitiesLoadingToast } from '@/components/panels/MaritimeUlsanPortFacilitiesLoadingToast';
+import { WeatherAirQualityStationsLoadingToast } from '@/components/panels/WeatherAirQualityStationsLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
 function formatValue(value: unknown): string {
@@ -31,6 +33,18 @@ function pickFirstString(properties: Record<string, unknown>, keys: string[]): s
     if (typeof value !== 'string') continue;
     const normalized = value.trim();
     if (normalized) return normalized;
+  }
+  return null;
+}
+
+function pickFirstNumber(properties: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = properties[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
   }
   return null;
 }
@@ -107,6 +121,17 @@ function isHealthInfectiousRiskSelection(selectedObject: { domain: string; prope
   );
 }
 
+function isWeatherAirQualityStationSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'weather') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'air-quality-station'
+    || typeof properties.stationName === 'string'
+    || typeof properties.monitoringNetwork === 'string'
+    || typeof properties.observationItems === 'string'
+  );
+}
+
 function isMaritimeBuoySelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
   if (selectedObject.domain !== 'maritime') return false;
   const properties = selectedObject.properties;
@@ -114,6 +139,28 @@ function isMaritimeBuoySelection(selectedObject: { domain: string; properties: R
     properties.layerKind === 'maritime-buoy'
     || typeof properties.blfrNo === 'string'
     || typeof properties.lightProperty === 'string'
+  );
+}
+
+function isDisasterEarthquakeSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'disaster') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'earthquake-ripple'
+    || typeof properties.occurredAt === 'string'
+    || typeof properties.magnitude === 'number'
+    || typeof properties.imageUrl === 'string'
+  );
+}
+
+function isDisasterCivilDefenseShelterSelection(selectedObject: { domain: string; properties: Record<string, unknown> }): boolean {
+  if (selectedObject.domain !== 'disaster') return false;
+  const properties = selectedObject.properties;
+  return (
+    properties.layerKind === 'civil-defense-shelter'
+    || typeof properties.managementNo === 'string'
+    || typeof properties.facilityType === 'string'
+    || typeof properties.operationStatus === 'string'
   );
 }
 
@@ -388,6 +435,145 @@ function buildMaritimeBuoyEntries(properties: Record<string, unknown>): Array<[s
   }
   if (remark) {
     entries.push(['비고', remark]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
+function buildDisasterEarthquakeEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['locationLabel', 'name']);
+  const occurredAt = pickFirstString(properties, ['occurredAt']);
+  const announcedAt = pickFirstString(properties, ['announcedAt']);
+  const intensityLabel = pickFirstString(properties, ['intensityLabel']);
+  const remarks = pickFirstString(properties, ['remarks']);
+  const corrections = pickFirstString(properties, ['corrections']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+  const stationId = pickFirstString(properties, ['stationId']);
+  const bulletinType = pickFirstString(properties, ['bulletinType']);
+  const magnitude = pickFirstNumber(properties, ['magnitude']);
+  const depthKm = pickFirstNumber(properties, ['depthKm']);
+
+  const entries: Array<[string, unknown]> = [
+    ['진앙 위치', name ?? '-'],
+    ['규모', magnitude !== null ? `M${formatValue(magnitude)}` : '-'],
+  ];
+
+  if (intensityLabel) {
+    entries.push(['최대진도', intensityLabel]);
+  }
+  if (depthKm !== null) {
+    entries.push(['깊이', `${formatValue(depthKm)} km`]);
+  }
+  if (occurredAt) {
+    entries.push(['발생시각', occurredAt]);
+  }
+  if (announcedAt) {
+    entries.push(['발표시각', announcedAt]);
+  }
+  if (stationId) {
+    entries.push(['지점코드', stationId]);
+  }
+  if (bulletinType) {
+    entries.push(['통보종류', bulletinType]);
+  }
+  if (remarks) {
+    entries.push(['참고사항', remarks]);
+  }
+  if (corrections) {
+    entries.push(['수정사항', corrections]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
+function buildDisasterCivilDefenseShelterEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name']);
+  const managementNo = pickFirstString(properties, ['managementNo']);
+  const facilityType = pickFirstString(properties, ['facilityType']);
+  const operationStatus = pickFirstString(properties, ['operationStatus']);
+  const locationType = pickFirstString(properties, ['locationType']);
+  const roadAddress = pickFirstString(properties, ['roadAddress']);
+  const lotAddress = pickFirstString(properties, ['lotAddress']);
+  const postalCode = pickFirstString(properties, ['postalCode']);
+  const designatedAt = pickFirstString(properties, ['designatedAt']);
+  const updatedAt = pickFirstString(properties, ['updatedAt', 'lastModifiedAt']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+  const capacity = pickFirstNumber(properties, ['capacity']);
+  const facilityArea = pickFirstNumber(properties, ['facilityArea']);
+
+  const entries: Array<[string, unknown]> = [
+    ['시설명', name ?? '-'],
+    ['운영상태', operationStatus ?? '-'],
+  ];
+
+  if (facilityType) {
+    entries.push(['시설구분', facilityType]);
+  }
+  if (capacity !== null) {
+    entries.push(['최대수용인원', `${formatValue(capacity)}명`]);
+  }
+  if (facilityArea !== null) {
+    entries.push(['시설면적', `${formatValue(facilityArea)}㎡`]);
+  }
+  if (locationType) {
+    entries.push(['지상/지하', locationType]);
+  }
+  if (roadAddress) {
+    entries.push(['도로명주소', roadAddress]);
+  }
+  if (lotAddress) {
+    entries.push(['지번주소', lotAddress]);
+  }
+  if (postalCode) {
+    entries.push(['우편번호', postalCode]);
+  }
+  if (managementNo) {
+    entries.push(['관리번호', managementNo]);
+  }
+  if (designatedAt) {
+    entries.push(['지정일자', designatedAt]);
+  }
+  if (updatedAt) {
+    entries.push(['데이터갱신', updatedAt]);
+  }
+  if (source) {
+    entries.push(['소스', source]);
+  }
+
+  return entries;
+}
+
+function buildWeatherAirQualityStationEntries(properties: Record<string, unknown>): Array<[string, unknown]> {
+  const name = pickFirstString(properties, ['name', 'stationName']);
+  const address = pickFirstString(properties, ['address']);
+  const monitoringNetwork = pickFirstString(properties, ['monitoringNetwork']);
+  const observationItems = pickFirstString(properties, ['observationItems']);
+  const regionLabel = pickFirstString(properties, ['regionLabel']);
+  const source = pickFirstString(properties, ['sourceLabel', 'source']);
+  const installedYear = pickFirstNumber(properties, ['installedYear']);
+
+  const entries: Array<[string, unknown]> = [
+    ['측정소명', name ?? '-'],
+    ['관제망', monitoringNetwork ?? '-'],
+  ];
+
+  if (regionLabel) {
+    entries.push(['권역', regionLabel]);
+  }
+  if (address) {
+    entries.push(['주소', address]);
+  }
+  if (observationItems) {
+    entries.push(['관측항목', observationItems]);
+  }
+  if (installedYear !== null) {
+    entries.push(['설치연도', installedYear]);
   }
   if (source) {
     entries.push(['소스', source]);
@@ -800,6 +986,15 @@ export default function StatusPanel() {
     if (isHealthInfectiousRiskSelection(selectedObject)) {
       return buildHealthInfectiousRiskEntries(selectedObject.properties);
     }
+    if (isWeatherAirQualityStationSelection(selectedObject)) {
+      return buildWeatherAirQualityStationEntries(selectedObject.properties);
+    }
+    if (isDisasterCivilDefenseShelterSelection(selectedObject)) {
+      return buildDisasterCivilDefenseShelterEntries(selectedObject.properties);
+    }
+    if (isDisasterEarthquakeSelection(selectedObject)) {
+      return buildDisasterEarthquakeEntries(selectedObject.properties);
+    }
     if (isMaritimeUlsanAnchorageSelection(selectedObject)) {
       return buildMaritimeUlsanAnchorageEntries(selectedObject.properties);
     }
@@ -868,6 +1063,8 @@ export default function StatusPanel() {
 
       <aside className="relative flex h-[calc(100vh-2rem)] w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 pointer-events-auto">
         <div className="pointer-events-none absolute left-0 right-0 -top-16 z-[75] flex flex-col gap-3 xl:left-auto xl:right-[calc(100%+0.75rem)] xl:top-3 xl:w-[280px]">
+          <WeatherAirQualityStationsLoadingToast />
+          <DisasterCivilDefenseShelterLoadingToast />
           <HealthInfectiousRiskLoadingToast />
           <HealthPharmacyLoadingToast />
           <HealthAedLoadingToast />

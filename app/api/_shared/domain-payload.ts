@@ -375,6 +375,15 @@ export function buildDomainPayload(domain: Team2DomainRoute): DomainPayload {
               point('quake-jeju-sea', [126.31, 33.86], { magnitude: 3.2, depthKm: 17 }),
             ]),
           },
+          {
+            id: 'disaster-civil-defense-shelters',
+            domain: 'disaster',
+            name: '민방위 대피시설',
+            type: 'marker',
+            visible: false,
+            style: { color: '#22c55e', radius: 560, opacity: 0.92 },
+            data: featureCollection([]),
+          },
         ],
         alerts: [
           {

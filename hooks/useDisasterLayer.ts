@@ -123,6 +123,26 @@ function updateEarthquake(
   };
 }
 
+function summarizeEarthquake(collection: GeoJSON.FeatureCollection): {
+  strongest: number;
+  focus?: [number, number];
+} {
+  let strongest = 0;
+  let focus: [number, number] | undefined;
+
+  for (const feature of collection.features) {
+    const props = (feature.properties as Record<string, unknown> | null) ?? {};
+    if (props.affectsDomestic === false) continue;
+    const magnitude = toNumber(props.magnitude);
+    if (magnitude === null) continue;
+    if (magnitude <= strongest) continue;
+    strongest = magnitude;
+    focus = toPointCoordinates(feature);
+  }
+
+  return { strongest, focus };
+}
+
 function updateFloodRisk(collection: GeoJSON.FeatureCollection, now: number): GeoJSON.FeatureCollection {
   const phase = (Math.sin(now / 6300) + 1) / 2;
   const level = phase > 0.82 ? 'warning' : phase > 0.6 ? 'watch' : 'normal';
@@ -160,6 +180,7 @@ export function useDisasterLayer() {
       const wildfireSource = state.layerDataSource['disaster-wildfire-points'];
       const wildfire = wildfireLayer?.visible ? wildfireLayer.data : null;
       const quakeLayer = ls['disaster-earthquake-ripple'];
+      const quakeSource = state.layerDataSource['disaster-earthquake-ripple'];
       const quake = quakeLayer?.visible ? quakeLayer.data : null;
       const floodLayer = ls['disaster-flood-risk'];
       const flood = floodLayer?.visible ? floodLayer.data : null;
@@ -175,9 +196,15 @@ export function useDisasterLayer() {
         focus = next.focus ?? focus;
       }
 
-      if (quake) {
+      if (quake && quakeSource !== 'upstream') {
         const next = updateEarthquake(quake, now);
         updateLayerData('disaster-earthquake-ripple', next.collection);
+        if (next.strongest > strongest) {
+          strongest = next.strongest;
+          if (next.focus) focus = next.focus;
+        }
+      } else if (quake) {
+        const next = summarizeEarthquake(quake);
         if (next.strongest > strongest) {
           strongest = next.strongest;
           if (next.focus) focus = next.focus;

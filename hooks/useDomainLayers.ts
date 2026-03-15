@@ -310,6 +310,25 @@ export function useDomainLayers() {
         style: { color: '#f97316', radius: 0, opacity: 0 },
       },
 
+      // ── 기상/대기 환경 (실데이터 placeholder) ──
+      {
+        id: 'weather-air-quality-stations',
+        domain: 'weather',
+        name: '대기질 측정소',
+        type: 'marker',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { color: '#60a5fa', radius: 430, opacity: 0.92 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'weather-air-quality-stations',
+              domain: 'weather',
+              type: 'marker',
+            })
+          ),
+      },
+
       // ── 사회적 약자 (신규 메뉴 placeholder) ──
       {
         id: 'vulnerable-elderly-welfare-facilities',
