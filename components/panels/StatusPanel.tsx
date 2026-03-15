@@ -16,6 +16,7 @@ import { MaritimeSeatnLoadingToast } from '@/components/panels/MaritimeSeatnLoad
 import { MaritimeSeafogLoadingToast } from '@/components/panels/MaritimeSeafogLoadingToast';
 import { MaritimeUlsanAnchoragesLoadingToast } from '@/components/panels/MaritimeUlsanAnchoragesLoadingToast';
 import { MaritimeUlsanPortFacilitiesLoadingToast } from '@/components/panels/MaritimeUlsanPortFacilitiesLoadingToast';
+import { WeatherAirQualityHeatmapLoadingToast } from '@/components/panels/WeatherAirQualityHeatmapLoadingToast';
 import { WeatherAirQualityStationsLoadingToast } from '@/components/panels/WeatherAirQualityStationsLoadingToast';
 import { useAppStore } from '@/stores/app-store';
 
@@ -556,7 +557,13 @@ function buildWeatherAirQualityStationEntries(properties: Record<string, unknown
   const observationItems = pickFirstString(properties, ['observationItems']);
   const regionLabel = pickFirstString(properties, ['regionLabel']);
   const source = pickFirstString(properties, ['sourceLabel', 'source']);
+  const dataTime = pickFirstString(properties, ['dataTime']);
   const installedYear = pickFirstNumber(properties, ['installedYear']);
+  const pm10Value = pickFirstNumber(properties, ['pm10Value']);
+  const pm25Value = pickFirstNumber(properties, ['pm25Value']);
+  const khaiValue = pickFirstNumber(properties, ['khaiValue']);
+  const pm10Grade = pickFirstNumber(properties, ['pm10Grade']);
+  const pm25Grade = pickFirstNumber(properties, ['pm25Grade']);
 
   const entries: Array<[string, unknown]> = [
     ['측정소명', name ?? '-'],
@@ -574,6 +581,24 @@ function buildWeatherAirQualityStationEntries(properties: Record<string, unknown
   }
   if (installedYear !== null) {
     entries.push(['설치연도', installedYear]);
+  }
+  if (dataTime) {
+    entries.push(['측정시각', dataTime]);
+  }
+  if (pm10Value !== null) {
+    entries.push(['PM10', `${formatValue(pm10Value)} ㎍/m3`]);
+  }
+  if (pm25Value !== null) {
+    entries.push(['PM2.5', `${formatValue(pm25Value)} ㎍/m3`]);
+  }
+  if (pm10Grade !== null) {
+    entries.push(['PM10 등급', pm10Grade]);
+  }
+  if (pm25Grade !== null) {
+    entries.push(['PM2.5 등급', pm25Grade]);
+  }
+  if (khaiValue !== null) {
+    entries.push(['통합대기지수', khaiValue]);
   }
   if (source) {
     entries.push(['소스', source]);
@@ -1063,6 +1088,7 @@ export default function StatusPanel() {
 
       <aside className="relative flex h-[calc(100vh-2rem)] w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 pointer-events-auto">
         <div className="pointer-events-none absolute left-0 right-0 -top-16 z-[75] flex flex-col gap-3 xl:left-auto xl:right-[calc(100%+0.75rem)] xl:top-3 xl:w-[280px]">
+          <WeatherAirQualityHeatmapLoadingToast />
           <WeatherAirQualityStationsLoadingToast />
           <DisasterCivilDefenseShelterLoadingToast />
           <HealthInfectiousRiskLoadingToast />

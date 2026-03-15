@@ -42,6 +42,7 @@ const EXTERNALLY_MANAGED_LAYER_IDS = new Set<string>([
   'health-infectious-trends',
   'health-infectious-distribution',
   'weather-air-quality-stations',
+  'weather-air-quality-heatmap',
   'transit-crowd-density',
   'transit-subway-passengers',
   'transit-bus-passengers',

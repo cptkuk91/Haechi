@@ -9,6 +9,7 @@ import { useWeatherLayer } from '@/hooks/useWeatherLayer';
 import { useDisasterLayer } from '@/hooks/useDisasterLayer';
 import { useCivilDefenseSheltersLayer } from '@/hooks/useCivilDefenseSheltersLayer';
 import { useEarthquakeLayer } from '@/hooks/useEarthquakeLayer';
+import { useWeatherAirQualityHeatmapLayer } from '@/hooks/useWeatherAirQualityHeatmapLayer';
 import { useWeatherAirQualityStationsLayer } from '@/hooks/useWeatherAirQualityStationsLayer';
 import { useVulnerableLayer } from '@/hooks/useVulnerableLayer';
 import { useDispatchLayer } from '@/hooks/useDispatchLayer';
@@ -42,6 +43,7 @@ export default function LayerBootstrap() {
   useTrafficFlowLayer();
   useWeatherLayer();
   useWeatherAirQualityStationsLayer();
+  useWeatherAirQualityHeatmapLayer();
   useDisasterLayer();
   useCivilDefenseSheltersLayer();
   useEarthquakeLayer();

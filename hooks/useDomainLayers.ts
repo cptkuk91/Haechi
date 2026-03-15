@@ -328,6 +328,23 @@ export function useDomainLayers() {
             })
           ),
       },
+      {
+        id: 'weather-air-quality-heatmap',
+        domain: 'weather',
+        name: '대기질 열지도',
+        type: 'heatmap',
+        visible: false,
+        data: emptyFeatureCollection(),
+        style: { radius: 34 },
+        onClick: (feature) =>
+          selectObject(
+            toSelectedObjectFromFeature(feature, {
+              id: 'weather-air-quality-heatmap',
+              domain: 'weather',
+              type: 'heatmap',
+            })
+          ),
+      },
 
       // ── 사회적 약자 (신규 메뉴 placeholder) ──
       {

@@ -422,6 +422,8 @@ export default function LayerPanel() {
                                         ? '약국 위치 (완료)'
                                       : layer.id === 'weather-air-quality-stations' && layerDataSource[layer.id] === 'upstream'
                                         ? '대기질 측정소 (완료)'
+                                      : layer.id === 'weather-air-quality-heatmap' && layerDataSource[layer.id] === 'upstream'
+                                        ? '대기질 열지도 (완료)'
                                       : layer.id === 'maritime-ulsan-port-facilities' && layerDataSource[layer.id] === 'upstream'
                                         ? '울산항 항만시설 (완료)'
                                       : layer.id === 'maritime-ulsan-anchorages' && layerDataSource[layer.id] === 'upstream'
